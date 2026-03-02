@@ -51,10 +51,10 @@ const Index = () => {
           <span className="text-[11px] tracking-[0.15em] uppercase text-dim">Boudoir</span>
         </div>
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/stock")}
           className="flex items-center gap-2 text-[13px] tracking-[0.15em] uppercase text-foreground transition-colors"
         >
-          <span>HOME</span>
+          <span>STOCK</span>
           <ArrowRight size={15} />
         </button>
       </div>
