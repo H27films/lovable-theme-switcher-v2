@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
 import ThemeToggle from "@/components/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Plus, X, ChevronLeft, ChevronRight, Search, Star, ChevronDown, FileText, Download, Chrome as Home } from "lucide-react";
+import { ArrowLeft, Plus, X, ChevronLeft, ChevronRight, Search, Star, ChevronDown, FileText, Download, Home } from "lucide-react";
+import jsPDF from "jspdf";
 
 interface BalanceRow {
   "Product Name": string;
@@ -60,6 +61,8 @@ function ProductDropdown({ entry, sortedBalances, onSelect, onSearch, onToggle, 
   showBalance?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const border = "hsl(var(--border))";
   const borderActive = "hsl(var(--border-active))";
   const cardBg = "hsl(var(--card))";
@@ -76,6 +79,35 @@ function ProductDropdown({ entry, sortedBalances, onSelect, onSearch, onToggle, 
     if (entry.showProductDropdown) document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [entry.showProductDropdown, onClose]);
+
+  // Reset active index when filtered list changes
+  useEffect(() => { setActiveIndex(-1); }, [entry.productSearch]);
+
+  // Scroll active item into view
+  useEffect(() => {
+    if (activeIndex >= 0 && listRef.current) {
+      const items = listRef.current.querySelectorAll("[data-item]");
+      items[activeIndex]?.scrollIntoView({ block: "nearest" });
+    }
+  }, [activeIndex]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!entry.showProductDropdown || filtered.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex(i => (i + 1) % filtered.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex(i => (i <= 0 ? filtered.length - 1 : i - 1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const target = activeIndex >= 0 ? filtered[activeIndex] : filtered[0];
+      if (target) { onSelect(target["Product Name"]); setActiveIndex(-1); }
+    } else if (e.key === "Escape") {
+      onClose();
+      setActiveIndex(-1);
+    }
+  };
 
   return (
     <div ref={ref} className="relative flex-1">
@@ -105,17 +137,21 @@ function ProductDropdown({ entry, sortedBalances, onSelect, onSearch, onToggle, 
               value={entry.productSearch}
               onChange={e => onSearch(e.target.value)}
               onClick={e => e.stopPropagation()}
+              onKeyDown={handleKeyDown}
             />
           </div>
-          <div className="max-h-[200px] overflow-y-auto scrollbar-thin">
-            {filtered.map(row => (
+          <div ref={listRef} className="max-h-[200px] overflow-y-auto scrollbar-thin">
+            {filtered.map((row, i) => (
               <div
                 key={row["Product Name"]}
+                data-item
                 className="flex items-center justify-between px-3 py-2.5 cursor-pointer transition-colors"
-                style={{ borderBottom: `1px solid ${border}` }}
-                onMouseDown={() => onSelect(row["Product Name"])}
-                onMouseEnter={e => (e.currentTarget.style.background = cardBg)}
-                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                style={{
+                  borderBottom: `1px solid ${border}`,
+                  background: i === activeIndex ? cardBg : "transparent",
+                }}
+                onMouseDown={() => { onSelect(row["Product Name"]); setActiveIndex(-1); }}
+                onMouseEnter={() => setActiveIndex(i)}
               >
                 <div className="flex items-center gap-2">
                   <span className="text-[13px] font-light">{row["Product Name"]}</span>
@@ -138,6 +174,7 @@ function TypeDropdown({ entry, onSelect, onToggle, onClose }: {
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const borderActive = "hsl(var(--border-active))";
   const border = "hsl(var(--border))";
   const cardBg = "hsl(var(--card))";
@@ -151,8 +188,39 @@ function TypeDropdown({ entry, onSelect, onToggle, onClose }: {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [entry.showTypeDropdown, onClose]);
 
+  // Reset when closed
+  useEffect(() => { if (!entry.showTypeDropdown) setActiveIndex(-1); }, [entry.showTypeDropdown]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!entry.showTypeDropdown) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); }
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex(i => (i + 1) % TYPES.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex(i => (i <= 0 ? TYPES.length - 1 : i - 1));
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      const target = activeIndex >= 0 ? TYPES[activeIndex] : TYPES[0];
+      onSelect(target);
+      setActiveIndex(-1);
+    } else if (e.key === "Escape") {
+      onClose();
+      setActiveIndex(-1);
+    }
+  };
+
   return (
-    <div ref={ref} className="relative flex-shrink-0" style={{ width: "110px" }}>
+    <div
+      ref={ref}
+      className="relative flex-shrink-0"
+      style={{ width: "110px" }}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+    >
       <div
         className="flex items-center justify-between px-2 py-2 cursor-pointer h-[34px]"
         style={{ background: cardBg, border: `1px solid ${borderActive}` }}
@@ -166,14 +234,16 @@ function TypeDropdown({ entry, onSelect, onToggle, onClose }: {
           className="absolute top-full left-0 right-0 z-50 border"
           style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px" }}
         >
-          {TYPES.map(t => (
+          {TYPES.map((t, i) => (
             <div
               key={t}
               className="px-3 py-2 text-[11px] font-light cursor-pointer transition-colors"
-              style={{ borderBottom: `1px solid ${border}` }}
-              onMouseDown={() => onSelect(t)}
-              onMouseEnter={e => (e.currentTarget.style.background = cardBg)}
-              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              style={{
+                borderBottom: `1px solid ${border}`,
+                background: i === activeIndex ? cardBg : "transparent",
+              }}
+              onMouseDown={() => { onSelect(t); setActiveIndex(-1); }}
+              onMouseEnter={() => setActiveIndex(i)}
             >{t}</div>
           ))}
         </div>
@@ -199,12 +269,15 @@ export default function Stock() {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [reversing, setReversing] = useState<number | null>(null);
   const [showOrderSummaryPanel, setShowOrderSummaryPanel] = useState(false);
+  const [grnNotes, setGrnNotes] = useState("");
   const [activityRange, setActivityRange] = useState<"14" | "all">("14");
   const [dateSortAsc, setDateSortAsc] = useState(false);
 
   const [stockSearch, setStockSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<BalanceRow | null>(null);
   const [showStockDropdown, setShowStockDropdown] = useState(false);
+  const [stockActiveIndex, setStockActiveIndex] = useState(-1);
+  const stockListRef = useRef<HTMLDivElement>(null);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -262,6 +335,36 @@ export default function Stock() {
     setSelectedProduct(row);
     setStockSearch(row["Product Name"]);
     setShowStockDropdown(false);
+    setStockActiveIndex(-1);
+  };
+
+  // Scroll stock dropdown active item into view
+  useEffect(() => {
+    if (stockActiveIndex >= 0 && stockListRef.current) {
+      const items = stockListRef.current.querySelectorAll("[data-item]");
+      items[stockActiveIndex]?.scrollIntoView({ block: "nearest" });
+    }
+  }, [stockActiveIndex]);
+
+  // Reset stock active index when search changes
+  useEffect(() => { setStockActiveIndex(-1); }, [stockSearch]);
+
+  const handleStockKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showStockDropdown || filteredStockProducts.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setStockActiveIndex(i => (i + 1) % filteredStockProducts.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setStockActiveIndex(i => (i <= 0 ? filteredStockProducts.length - 1 : i - 1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const target = stockActiveIndex >= 0 ? filteredStockProducts[stockActiveIndex] : filteredStockProducts[0];
+      if (target) handleSelectProduct(target);
+    } else if (e.key === "Escape") {
+      setShowStockDropdown(false);
+      setStockActiveIndex(-1);
+    }
   };
 
   // Daily Usage helpers
@@ -363,11 +466,9 @@ export default function Stock() {
   const reverseOrder = async (row: LogRow) => {
     setReversing(row.id);
     try {
-      // Revert balance back to Starting Balance before this order
       await (supabase as any).from("Boudoir Balance")
         .update({ "Starting Balance": row["Starting Balance"] })
         .eq("Product Name", row["Product Name"]);
-      // Delete the log row
       await (supabase as any).from("BoudoirLog").delete().eq("id", row.id);
       await fetchBalances();
       await fetchLog();
@@ -388,6 +489,14 @@ export default function Stock() {
     const valid = orderEntries.filter(e => e.productName && e.qty > 0);
     if (!valid.length) return;
     setOrderSubmitting(true);
+
+    // Generate GRN: BOU DDMMYY
+    const d = new Date();
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yy = String(d.getFullYear()).slice(-2);
+    const grn = `BOU ${dd}${mm}${yy}`;
+
     try {
       for (const entry of valid) {
         const balance = balances.find(b => b["Product Name"] === entry.productName);
@@ -400,6 +509,7 @@ export default function Stock() {
           "Qty": Number(entry.qty),
           "Starting Balance": currentBalance,
           "Ending Balance": endingBalance,
+          "GRN": grn,
         });
         await (supabase as any).from("Boudoir Balance")
           .update({ "Starting Balance": endingBalance })
@@ -436,6 +546,168 @@ export default function Stock() {
     dateSortAsc ? a.Date.localeCompare(b.Date) : b.Date.localeCompare(a.Date)
   );
 
+
+  const generateGRNPdf = () => {
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const W = 595;
+    const margin = 50;
+
+    const grnNumber = (() => {
+      const found = allTodayOrders.find((r: any) => r["GRN"]);
+      if (found) return (found as any)["GRN"];
+      const d = new Date();
+      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const yy = String(d.getFullYear()).slice(-2);
+      return `BOU ${dd}${mm}${yy}`;
+    })();
+
+    const dateStr = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
+
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(26, 26, 26);
+    doc.text("BOUDOIR", margin, 58);
+    doc.text("GOODS RECEIVED NOTE", W - margin, 58, { align: "right" });
+
+    // Divider
+    doc.setDrawColor(26, 26, 26);
+    doc.setLineWidth(0.8);
+    doc.line(margin, 64, W - margin, 64);
+
+    // Address
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(26, 26, 26);
+    doc.text("ADDRESS", margin, 78);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(128, 128, 128);
+    doc.text("+60123333128  /  soongailing@gmail.com", margin, 90);
+    doc.text("2F-11, Bangsar Village 2, No 2, Jalan Telawi 1, Bangsar Baru, Kuala Lumpur, 59100, Malaysia", margin, 101);
+
+    // Meta
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(26, 26, 26);
+    doc.text("DATE", margin, 130);
+    doc.text("GRN NUMBER", margin + 120, 130);
+    doc.setFontSize(10);
+    doc.text(dateStr, margin, 143);
+    doc.text(grnNumber, margin + 120, 143);
+
+    // Notes box
+    const notesY = 160;
+    const notesH = 56;
+    doc.setFillColor(247, 247, 247);
+    doc.rect(margin, notesY, W - 2 * margin, notesH, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(26, 26, 26);
+    doc.text("NOTES", margin + 6, notesY + 12);
+    if (grnNotes.trim()) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(90, 90, 90);
+      doc.text(grnNotes, margin + 6, notesY + 26, { maxWidth: W - 2 * margin - 12 });
+    }
+
+    // Column positions
+    // #(30) | Product Name(220) | Old Bal(70) | Order Qty(70) | Ending Bal(55)
+    const numX  = margin;
+    const nameX = margin + 30;
+    const oldCX = margin + 285;
+    const qtyCX = margin + 355;
+    const endCX = margin + 427;
+
+    // Table header — taller with wrapped text
+    const tableTop = 250;
+    const headerH = 28;
+    doc.setFillColor(242, 242, 242);
+    doc.rect(margin, tableTop - headerH + 12, W - 2 * margin, headerH, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(26, 26, 26);
+    doc.text("NO", numX + 10, tableTop - 2, { align: "center" });
+    doc.text("PRODUCT NAME", nameX, tableTop - 2);
+    doc.text("OLD", oldCX, tableTop + 5, { align: "center" });
+    doc.text("BALANCE", oldCX, tableTop - 5, { align: "center" });
+    doc.text("ORDER", qtyCX, tableTop + 5, { align: "center" });
+    doc.text("QTY", qtyCX, tableTop - 5, { align: "center" });
+    doc.text("ENDING", endCX, tableTop + 5, { align: "center" });
+    doc.text("BALANCE", endCX, tableTop - 5, { align: "center" });
+
+    // Rows — sorted alphabetically
+    const sortedOrders = [...allTodayOrders].sort((a, b) =>
+      a["Product Name"].localeCompare(b["Product Name"])
+    );
+
+    const rowH = 26;
+    let y = tableTop + 16;
+    let totalQty = 0;
+
+    sortedOrders.forEach((row, idx) => {
+      totalQty += row.Qty;
+      if (idx % 2 === 0) {
+        doc.setFillColor(250, 250, 250);
+        doc.rect(margin, y - 2, W - 2 * margin, rowH, "F");
+      }
+      doc.setDrawColor(224, 224, 224);
+      doc.setLineWidth(0.4);
+      doc.line(margin, y + rowH - 2, W - margin, y + rowH - 2);
+
+      // Row number
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(140, 140, 140);
+      doc.text(String(idx + 1), numX + 10, y + 14, { align: "center" });
+
+      // Product name
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.setTextColor(38, 38, 38);
+      doc.text(row["Product Name"], nameX, y + 14);
+      doc.text(String(row["Starting Balance"]), oldCX, y + 14, { align: "center" });
+      doc.text(String(row.Qty), qtyCX, y + 14, { align: "center" });
+      doc.text(String(row["Ending Balance"]), endCX, y + 14, { align: "center" });
+      y += rowH;
+    });
+
+    // Total row
+    doc.setDrawColor(77, 77, 77);
+    doc.setLineWidth(0.6);
+    doc.line(margin, y - 2, W - margin, y - 2);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(26, 26, 26);
+    doc.text("TOTAL ORDER QTY", nameX, y + 14);
+    doc.text(String(totalQty), qtyCX, y + 14, { align: "center" });
+    y += rowH;
+
+    // Bottom rule
+    const pageH = 842;
+    const sigY = Math.max(y + 70, pageH - 110);
+
+    // Signatures
+    const sigW = 180;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(128, 128, 128);
+    doc.text("RECEIVED BY", margin, sigY - 14);
+    doc.setDrawColor(77, 77, 77);
+    doc.setLineWidth(0.5);
+    doc.line(margin, sigY, margin + sigW, sigY);
+    const rightSigX = W - margin - sigW;
+    doc.text("ORDER PROCESSED BY", rightSigX, sigY - 14);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(38, 38, 38);
+    doc.text("Hamza Riazuddin", rightSigX, sigY - 4);
+    doc.line(rightSigX, sigY, rightSigX + sigW, sigY);
+
+    doc.save(`${grnNumber} - GRN.pdf`);
+  };
   const exportToExcel = () => {
     const rows = [
       ["Product Name", "Starting Balance", "Order Qty", "Ending Balance"],
@@ -525,6 +797,7 @@ export default function Stock() {
               <p className="text-[11px] tracking-wider uppercase mt-1" style={dim}>{balances.length} products · Boudoir</p>
             </div>
 
+            {/* Stock search bar with keyboard nav */}
             <div className="relative mb-6">
               <div className="flex items-center gap-3 border-b pb-2" style={{ borderColor: borderActive }}>
                 <Search size={13} style={dim} />
@@ -536,21 +809,29 @@ export default function Stock() {
                   onChange={e => { setStockSearch(e.target.value); setSelectedProduct(null); setShowStockDropdown(true); }}
                   onFocus={() => setShowStockDropdown(true)}
                   onBlur={() => setTimeout(() => setShowStockDropdown(false), 150)}
+                  onKeyDown={handleStockKeyDown}
                 />
                 {stockSearch && (
                   <button onClick={() => { setStockSearch(""); setSelectedProduct(null); }} style={dim}><X size={13} /></button>
                 )}
               </div>
               {showStockDropdown && filteredStockProducts.length > 0 && (
-                <div className="absolute top-full left-0 right-0 z-50 border max-h-[220px] overflow-y-auto scrollbar-thin"
-                  style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px" }}>
-                  {filteredStockProducts.map(row => (
+                <div
+                  ref={stockListRef}
+                  className="absolute top-full left-0 right-0 z-50 border max-h-[220px] overflow-y-auto scrollbar-thin"
+                  style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px" }}
+                >
+                  {filteredStockProducts.map((row, i) => (
                     <div key={row["Product Name"]}
+                      data-item
                       className="flex items-center justify-between px-4 py-2.5 cursor-pointer transition-colors"
-                      style={{ borderBottom: `1px solid ${border}` }}
+                      style={{
+                        borderBottom: `1px solid ${border}`,
+                        background: i === stockActiveIndex ? cardBg : "transparent",
+                      }}
                       onMouseDown={() => handleSelectProduct(row)}
-                      onMouseEnter={e => (e.currentTarget.style.background = cardBg)}
-                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                      onMouseEnter={() => setStockActiveIndex(i)}
+                    >
                       <div className="flex items-center gap-2">
                         <span className="text-[13px] font-light">{row["Product Name"]}</span>
                         {row["Favourite"] === "Yes" && <Star size={9} fill="currentColor" style={dim} />}
@@ -883,7 +1164,7 @@ export default function Stock() {
                   </div>
                 )}
 
-                {/* Recent Orders — last 14 days by default, or all data */}
+                {/* Recent Orders */}
                 <div className="mt-10">
                   <div className="mb-5">
                     <div className="flex items-center gap-5">
@@ -897,18 +1178,8 @@ export default function Stock() {
                           letterSpacing: "-0.02em",
                           color: activityRange === "14" ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
                         }}
-                        onMouseEnter={e => {
-                          if (activityRange !== "14") {
-                            e.currentTarget.style.color = "hsl(var(--foreground))";
-                            e.currentTarget.style.fontSize = "20px";
-                          }
-                        }}
-                        onMouseLeave={e => {
-                          if (activityRange !== "14") {
-                            e.currentTarget.style.color = "hsl(var(--muted-foreground))";
-                            e.currentTarget.style.fontSize = "18px";
-                          }
-                        }}
+                        onMouseEnter={e => { if (activityRange !== "14") { e.currentTarget.style.color = "hsl(var(--foreground))"; e.currentTarget.style.fontSize = "20px"; } }}
+                        onMouseLeave={e => { if (activityRange !== "14") { e.currentTarget.style.color = "hsl(var(--muted-foreground))"; e.currentTarget.style.fontSize = "18px"; } }}
                       >
                         Recent Activity
                       </button>
@@ -922,18 +1193,8 @@ export default function Stock() {
                           letterSpacing: "-0.02em",
                           color: activityRange === "all" ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
                         }}
-                        onMouseEnter={e => {
-                          if (activityRange !== "all") {
-                            e.currentTarget.style.color = "hsl(var(--foreground))";
-                            e.currentTarget.style.fontSize = "20px";
-                          }
-                        }}
-                        onMouseLeave={e => {
-                          if (activityRange !== "all") {
-                            e.currentTarget.style.color = "hsl(var(--muted-foreground))";
-                            e.currentTarget.style.fontSize = "18px";
-                          }
-                        }}
+                        onMouseEnter={e => { if (activityRange !== "all") { e.currentTarget.style.color = "hsl(var(--foreground))"; e.currentTarget.style.fontSize = "20px"; } }}
+                        onMouseLeave={e => { if (activityRange !== "all") { e.currentTarget.style.color = "hsl(var(--muted-foreground))"; e.currentTarget.style.fontSize = "18px"; } }}
                       >
                         All Data
                       </button>
@@ -994,18 +1255,8 @@ export default function Stock() {
                       letterSpacing: "-0.02em",
                       color: activityRange === "14" ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
                     }}
-                    onMouseEnter={e => {
-                      if (activityRange !== "14") {
-                        e.currentTarget.style.color = "hsl(var(--foreground))";
-                        e.currentTarget.style.fontSize = "20px";
-                      }
-                    }}
-                    onMouseLeave={e => {
-                      if (activityRange !== "14") {
-                        e.currentTarget.style.color = "hsl(var(--muted-foreground))";
-                        e.currentTarget.style.fontSize = "18px";
-                      }
-                    }}
+                    onMouseEnter={e => { if (activityRange !== "14") { e.currentTarget.style.color = "hsl(var(--foreground))"; e.currentTarget.style.fontSize = "20px"; } }}
+                    onMouseLeave={e => { if (activityRange !== "14") { e.currentTarget.style.color = "hsl(var(--muted-foreground))"; e.currentTarget.style.fontSize = "18px"; } }}
                   >
                     Recent Activity
                   </button>
@@ -1019,18 +1270,8 @@ export default function Stock() {
                       letterSpacing: "-0.02em",
                       color: activityRange === "all" ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
                     }}
-                    onMouseEnter={e => {
-                      if (activityRange !== "all") {
-                        e.currentTarget.style.color = "hsl(var(--foreground))";
-                        e.currentTarget.style.fontSize = "20px";
-                      }
-                    }}
-                    onMouseLeave={e => {
-                      if (activityRange !== "all") {
-                        e.currentTarget.style.color = "hsl(var(--muted-foreground))";
-                        e.currentTarget.style.fontSize = "18px";
-                      }
-                    }}
+                    onMouseEnter={e => { if (activityRange !== "all") { e.currentTarget.style.color = "hsl(var(--foreground))"; e.currentTarget.style.fontSize = "20px"; } }}
+                    onMouseLeave={e => { if (activityRange !== "all") { e.currentTarget.style.color = "hsl(var(--muted-foreground))"; e.currentTarget.style.fontSize = "18px"; } }}
                   >
                     All Data
                   </button>
@@ -1145,16 +1386,44 @@ export default function Stock() {
                   </tbody>
                 </table>
 
-                <button
-                  onClick={exportToExcel}
-                  className="flex items-center gap-2 text-[11px] tracking-wider uppercase transition-colors"
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
-                >
-                  <Download size={12} />
-                  Export to Excel
-                </button>
+                {/* Notes */}
+                <div className="mb-6 mt-2">
+                  <p className="text-[10px] tracking-wider uppercase mb-2" style={{ color: "hsl(var(--muted-foreground))" }}>Add Notes</p>
+                  <textarea
+                    rows={3}
+                    className="w-full bg-transparent outline-none text-[13px] font-light resize-none"
+                    style={{
+                      borderBottom: "1px solid hsl(var(--border-active))",
+                      padding: "6px 0",
+                      color: "hsl(var(--foreground))",
+                    }}
+                    placeholder="Example: No Argan Stock..."
+                    value={grnNotes}
+                    onChange={e => setGrnNotes(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-6">
+                  <button
+                    onClick={generateGRNPdf}
+                    className="flex items-center gap-2 text-[11px] tracking-wider uppercase transition-colors"
+                    style={{ color: "hsl(var(--muted-foreground))" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                  >
+                    <FileText size={12} />
+                    GRN
+                  </button>
+                  <button
+                    onClick={exportToExcel}
+                    className="flex items-center gap-2 text-[11px] tracking-wider uppercase transition-colors"
+                    style={{ color: "hsl(var(--muted-foreground))" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                  >
+                    <Download size={12} />
+                    Export to Excel
+                  </button>
+                </div>
               </>
             )}
           </div>
