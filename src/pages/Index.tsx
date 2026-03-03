@@ -9,7 +9,7 @@ import PriceTable from "@/components/PriceTable";
 import NewProductPanel from "@/components/NewProductPanel";
 import FullListPanel from "@/components/FullListPanel";
 import OrderListPanel from "@/components/OrderListPanel";
-import { Lock, Plus, ArrowRight, FileText } from "lucide-react";
+import { Lock, Plus, ArrowRight, FileText, Home } from "lucide-react";
 
 const Index = () => {
   const { theme, toggle, font, cycleFont } = useTheme();
@@ -46,9 +46,18 @@ const Index = () => {
       <div className="w-full max-w-[760px]">
       {/* Header bar matching Stock layout (flipped) */}
       <div className="flex justify-between items-center py-6 border-b border-border mb-10">
-        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
           <ThemeToggle theme={theme} toggle={toggle} font={font} cycleFont={cycleFont} />
-          <span className="text-[11px] tracking-[0.15em] uppercase text-dim">Boudoir</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] tracking-[0.15em] uppercase text-dim">Boudoir</span>
+            <button
+              onClick={() => navigate("/")}
+              className="flex items-center justify-center w-7 h-7 rounded-full border border-border text-dim hover:text-foreground hover:bg-card transition-colors"
+              aria-label="Go to home"
+            >
+              <Home size={14} />
+            </button>
+          </div>
         </div>
         <button
           onClick={() => navigate("/stock")}

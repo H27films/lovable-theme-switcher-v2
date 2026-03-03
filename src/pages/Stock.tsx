@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
 import ThemeToggle from "@/components/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Plus, X, ChevronLeft, ChevronRight, Search, Star, ChevronDown, FileText, Download } from "lucide-react";
+import { ArrowLeft, Plus, X, ChevronLeft, ChevronRight, Search, Star, ChevronDown, FileText, Download, Home } from "lucide-react";
 
 interface BalanceRow {
   "Product Name": string;
@@ -444,7 +444,25 @@ export default function Stock() {
             <span>PRICE LIST</span>
           </button>
           <div className="flex items-center gap-4">
-            <span className="text-[11px] tracking-[0.15em] uppercase" style={dim}>Boudoir</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] tracking-[0.15em] uppercase" style={dim}>Boudoir</span>
+              <button
+                onClick={() => navigate("/")}
+                className="flex items-center justify-center w-7 h-7 rounded-full border transition-colors"
+                style={{ ...dim, borderColor: "hsl(var(--border))" }}
+                aria-label="Go to home"
+                onMouseEnter={e => {
+                  e.currentTarget.style.color = "hsl(var(--foreground))";
+                  e.currentTarget.style.backgroundColor = "hsl(var(--card))";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.color = "hsl(var(--muted-foreground))";
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+              >
+                <Home size={14} />
+              </button>
+            </div>
             <ThemeToggle theme={theme} toggle={toggle} font={font} cycleFont={cycleFont} />
           </div>
         </div>
