@@ -199,6 +199,7 @@ export default function Stock() {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [reversing, setReversing] = useState<number | null>(null);
   const [showOrderSummaryPanel, setShowOrderSummaryPanel] = useState(false);
+  const [activityRange, setActivityRange] = useState<"14" | "all">("14");
 
   const [stockSearch, setStockSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<BalanceRow | null>(null);
@@ -224,7 +225,7 @@ export default function Stock() {
   const fetchLog = useCallback(async () => {
     try {
       const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 14);
+      cutoff.setDate(cutoff.getDate() - 31);
       const { data, error } = await (supabase as any)
         .from("BoudoirLog")
         .select("*")
@@ -306,7 +307,7 @@ export default function Stock() {
           .eq("Product Name", entry.productName);
       }
       const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 14);
+      cutoff.setDate(cutoff.getDate() - 31);
       await (supabase as any).from("BoudoirLog").delete().lt("Date", cutoff.toISOString().split("T")[0]);
       await fetchBalances();
       await fetchLog();
@@ -339,6 +340,10 @@ export default function Stock() {
 
   const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+  const cutoff14 = new Date();
+  cutoff14.setDate(cutoff14.getDate() - 14);
+  const cutoff14Str = cutoff14.toISOString().split("T")[0];
   const todayOrders = log.filter(r => r.Type === "Order" && r.Date === today);
 
   const reverseUsage = async (row: LogRow) => {
@@ -415,6 +420,14 @@ export default function Stock() {
 
   const allTodayOrders = log.filter(r => r.Type === "Order" && r.Date === today);
   const hasOrderNotification = allTodayOrders.length > 0;
+
+  const activityLog = activityRange === "all"
+    ? log
+    : log.filter(r => r.Date >= cutoff14Str);
+
+  const recentOrdersLog = log.filter(r =>
+    r.Type === "Order" && (activityRange === "all" || r.Date >= cutoff14Str)
+  );
 
   const exportToExcel = () => {
     const rows = [
@@ -863,13 +876,29 @@ export default function Stock() {
                   </div>
                 )}
 
-                {/* Recent Orders — last 14 days, type Order only */}
+                {/* Recent Orders — last 14 days by default, or all data */}
                 <div className="mt-10">
-                  <div className="mb-5">
-                    <h2 className="text-[22px] font-light tracking-tight">Recent Orders</h2>
-                    <p className="text-[11px] tracking-wider uppercase mt-1" style={dim}>Last 14 days</p>
+                  <div className="mb-5 flex items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-[22px] font-light tracking-tight">Recent Orders</h2>
+                      <p className="text-[11px] tracking-wider uppercase mt-1" style={dim}>
+                        {activityRange === "all" ? "All data" : "Last 14 days"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActivityRange(prev => prev === "all" ? "14" : "all")}
+                      className="text-[10px] tracking-wider uppercase px-3 py-1 rounded-full border transition-colors"
+                      style={{
+                        borderColor: "hsl(var(--border))",
+                        color: activityRange === "all" ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+                        backgroundColor: activityRange === "all" ? "hsl(var(--card))" : "transparent",
+                      }}
+                    >
+                      ALL DATA
+                    </button>
                   </div>
-                  {log.filter(r => r.Type === "Order").length === 0 ? (
+                  {recentOrdersLog.length === 0 ? (
                     <p className="text-[13px]" style={dim}>No orders yet</p>
                   ) : (
                     <table className="w-full border-collapse">
@@ -882,7 +911,7 @@ export default function Stock() {
                         </tr>
                       </thead>
                       <tbody>
-                        {log.filter(r => r.Type === "Order").map(row => (
+                        {recentOrdersLog.map(row => (
                           <tr key={row.id} className="border-b table-row-hover" style={{ borderColor: border }}>
                             <td className="text-[12px] font-light py-3" style={dim}>
                               {new Date(row.Date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
@@ -903,11 +932,27 @@ export default function Stock() {
           {/* ── SECTION 3: Recent Activity (Daily Usage mode only) ── */}
           {mode === "usage" && (
             <div>
-              <div className="mb-5">
-                <h2 className="text-[22px] font-light tracking-tight">Recent Activity</h2>
-                <p className="text-[11px] tracking-wider uppercase mt-1" style={dim}>Last 14 days</p>
+              <div className="mb-5 flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-[22px] font-light tracking-tight">Recent Activity</h2>
+                  <p className="text-[11px] tracking-wider uppercase mt-1" style={dim}>
+                    {activityRange === "all" ? "All data" : "Last 14 days"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActivityRange(prev => prev === "all" ? "14" : "all")}
+                  className="text-[10px] tracking-wider uppercase px-3 py-1 rounded-full border transition-colors"
+                  style={{
+                    borderColor: "hsl(var(--border))",
+                    color: activityRange === "all" ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+                    backgroundColor: activityRange === "all" ? "hsl(var(--card))" : "transparent",
+                  }}
+                >
+                  ALL DATA
+                </button>
               </div>
-              {log.length === 0 ? (
+              {activityLog.length === 0 ? (
                 <p className="text-[13px]" style={dim}>No entries yet</p>
               ) : (
                 <table className="w-full border-collapse">
@@ -922,7 +967,7 @@ export default function Stock() {
                     </tr>
                   </thead>
                   <tbody>
-                    {log.map(row => {
+                    {activityLog.map(row => {
                       const canReverse = row.Date === today || row.Date === yesterdayStr;
                       return (
                         <tr key={row.id} className="border-b table-row-hover" style={{ borderColor: border }}>
