@@ -733,22 +733,22 @@ export default function Stock() {
 
     // Address
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
+    doc.setFontSize(10);
     doc.setTextColor(26, 26, 26);
     doc.text("ADDRESS", margin, 78);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
+    doc.setFontSize(9);
     doc.setTextColor(128, 128, 128);
     doc.text("+60123333128  /  soongailing@gmail.com", margin, 90);
     doc.text("2F-11, Bangsar Village 2, No 2, Jalan Telawi 1, Bangsar Baru, Kuala Lumpur, 59100, Malaysia", margin, 101);
 
     // Meta
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
     doc.setTextColor(26, 26, 26);
     doc.text("DATE", margin, 130);
     doc.text("GRN NUMBER", margin + 120, 130);
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.text(dateStr, margin, 143);
     doc.text(grnNumber, margin + 120, 143);
 
@@ -760,7 +760,7 @@ export default function Stock() {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7.5);
     doc.setTextColor(26, 26, 26);
-    doc.text("NOTES", margin + 6, notesY + 12);
+    doc.text("NOTES", margin, notesY + 12);
     if (grnNotes.trim()) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8.5);
