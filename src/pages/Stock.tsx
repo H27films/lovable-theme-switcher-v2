@@ -1101,8 +1101,8 @@ export default function Stock() {
                         <tr className="border-b" style={{ borderColor: borderActive }}>
                           <th className="label-uppercase font-normal text-left pb-3 pt-2">Product</th>
                           <th className="label-uppercase font-normal text-center pb-3 pt-2">CURRENT BAL</th>
-                          <th className="label-uppercase font-normal text-center pb-3 pt-2">ORDER QTY</th>
-                          <th className="label-uppercase font-normal text-center pb-3 pt-2">Ending Bal.</th>
+                          <th className="label-uppercase font-normal text-center pb-3 pt-2">QTY</th>
+                          <th className="label-uppercase font-normal text-center pb-3 pt-2">Ending Bal</th>
                           <th className="w-6" />
                         </tr>
                       </thead>
@@ -1133,7 +1133,7 @@ export default function Stock() {
                         <tr className="border-b" style={{ borderColor: borderActive }}>
                           <th className="label-uppercase font-normal text-left pb-3 pt-2">Product</th>
                           <th className="label-uppercase font-normal text-center pb-3 pt-2">Starting Bal</th>
-                          <th className="label-uppercase font-normal text-center pb-3 pt-2">Order Qty</th>
+                          <th className="label-uppercase font-normal text-center pb-3 pt-2">Qty</th>
                           <th className="label-uppercase font-normal text-center pb-3 pt-2">Ending Bal</th>
                           <th className="w-6" />
                         </tr>
@@ -1217,9 +1217,9 @@ export default function Stock() {
                             onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
                           >Date</th>
                           <th className="label-uppercase font-normal text-left pb-3 pt-2">Product</th>
-                          <th className="label-uppercase font-normal text-center pb-3 pt-2">Starting Bal.</th>
+                          <th className="label-uppercase font-normal text-center pb-3 pt-2">Starting Bal</th>
                           <th className="label-uppercase font-normal text-center pb-3 pt-2">Qty</th>
-                          <th className="label-uppercase font-normal text-center pb-3 pt-2">Ending Bal.</th>
+                          <th className="label-uppercase font-normal text-center pb-3 pt-2">Ending Bal</th>
                         </tr>
                       </thead>
                       <tbody>
