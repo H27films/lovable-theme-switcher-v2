@@ -205,7 +205,7 @@ const Index = () => {
           {/* ── Page header ── */}
           <div className="flex items-end justify-between mb-8">
             <div>
-              <h1 className="text-[11px] font-normal tracking-[0.2em] uppercase mb-1" style={dim}>Office Central</h1>
+              <h1 className="text-[11px] font-normal tracking-[0.2em] uppercase text-dim mb-1">Office Database</h1>
               <p className="text-[28px] font-light tracking-tight">Stock Inventory</p>
               <p className="text-[11px] tracking-wider uppercase mt-1" style={dim}>
                 {products.length} products
@@ -459,12 +459,11 @@ const Index = () => {
                         Par
                       </th>
 
-                      {/* Supplier Price — always bright white, NOT sortable */}
-                      <th className={`${thBase} text-center pr-4 align-top`}
-                        style={{ color: "hsl(var(--foreground))", cursor: "default" }}
+                      {/* Supplier Price — dim header, bright white data */}
+                      <th className={`${thBase} text-center pr-4 align-top`} style={dim}
                         onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
-                        onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}>
-                        Supplier<br /><span style={{ color: "hsl(var(--foreground))" }}>RM</span>
+                        onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
+                        Supplier<br /><span>RM</span>
                       </th>
 
                       {/* Branch Price — dim */}
