@@ -339,6 +339,8 @@ export default function Stock() {
   const [showOrderSummaryPanel, setShowOrderSummaryPanel] = useState(false);
   const [grnNotes, setGrnNotes] = useState("");
   const [expandedGRNs, setExpandedGRNs] = useState<Set<string>>(new Set());
+  const [expandedActivityDates, setExpandedActivityDates] = useState<Set<string>>(new Set());
+  const [expandedOrderDates, setExpandedOrderDates] = useState<Set<string>>(new Set());
   const [editingOrderRow, setEditingOrderRow] = useState<number | null>(null);
   const [editingOrderQty, setEditingOrderQty] = useState<string>("");
   const [savingOrderEdit, setSavingOrderEdit] = useState<number | null>(null);
@@ -381,7 +383,7 @@ export default function Stock() {
   const fetchLog = useCallback(async () => {
     try {
       const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 31);
+      cutoff.setDate(cutoff.getDate() - 60);
       const { data, error } = await (supabase as any)
         .from("BoudoirLog")
         .select("*")
@@ -508,7 +510,7 @@ export default function Stock() {
           .eq("Product Name", entry.productName);
       }
       const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 31);
+      cutoff.setDate(cutoff.getDate() - 60);
       await (supabase as any).from("BoudoirLog").delete().lt("Date", cutoff.toISOString().split("T")[0]);
       await fetchBalances();
       await fetchLog();
@@ -610,6 +612,26 @@ export default function Stock() {
       return next;
     });
   };
+
+  const toggleActivityDate = (date: string) => {
+    setExpandedActivityDates(prev => {
+      const next = new Set(prev);
+      next.has(date) ? next.delete(date) : next.add(date);
+      return next;
+    });
+  };
+
+  const toggleOrderDate = (date: string) => {
+    setExpandedOrderDates(prev => {
+      const next = new Set(prev);
+      next.has(date) ? next.delete(date) : next.add(date);
+      return next;
+    });
+  };
+
+  const cutoff7 = new Date();
+  cutoff7.setDate(cutoff7.getDate() - 7);
+  const cutoff7Str = cutoff7.toISOString().split("T")[0];
 
   const orderSummary = orderEntries
     .filter(e => e.productName)
@@ -1391,42 +1413,95 @@ export default function Stock() {
                   </div>
                   {recentOrdersLog.length === 0 ? (
                     <p className="text-[13px]" style={dim}>No orders yet</p>
-                  ) : (
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b" style={{ borderColor: borderActive }}>
-                          <th
-                            className="label-uppercase font-normal text-left pb-3 pt-2 cursor-pointer select-none transition-colors"
-                            style={{ color: "hsl(var(--muted-foreground))" }}
-                            onClick={() => setDateSortAsc(prev => !prev)}
-                            onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
-                            onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
-                          >Date</th>
-                          <th className="label-uppercase font-normal text-left pb-3 pt-2">Product</th>
-                          <th className="label-uppercase font-normal text-center pb-3 pt-2">Starting Bal</th>
-                          <th className="label-uppercase font-normal text-center pb-3 pt-2">Qty</th>
-                          <th className="label-uppercase font-normal text-center pb-3 pt-2">Ending Bal</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentOrdersLog.map((row, idx) => {
-                          const nextRow = recentOrdersLog[idx + 1];
-                          const isDateBreak = nextRow && nextRow.Date !== row.Date;
-                          return (
-                          <tr key={row.id} className="table-row-hover" style={{ borderBottom: `1px solid ${isDateBreak ? "hsl(var(--foreground))" : border}` }}>
-                            <td className="text-[12px] font-light py-3">
-                              {new Date(row.Date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                            </td>
-                            <td className="text-[13px] font-light py-3">{row["Product Name"]}</td>
-                            <td className="text-[13px] font-light py-3 text-center" style={dim}>{row["Starting Balance"]}</td>
-                            <td className="text-[13px] font-light py-3 text-center" style={{ color: "hsl(var(--green))" }}>{row.Qty > 0 ? "+" : ""}{row.Qty}</td>
-                            <td className="text-[13px] font-light py-3 text-center">{row["Ending Balance"]}</td>
+                  ) : (() => {
+                    const recentRows = recentOrdersLog.filter(r => r.Date >= cutoff7Str);
+                    const olderRows = recentOrdersLog.filter(r => r.Date < cutoff7Str);
+
+                    const olderByDate = new Map<string, LogRow[]>();
+                    olderRows.forEach(r => {
+                      if (!olderByDate.has(r.Date)) olderByDate.set(r.Date, []);
+                      olderByDate.get(r.Date)!.push(r);
+                    });
+                    const olderDates = [...olderByDate.keys()].sort((a, b) =>
+                      dateSortAsc ? a.localeCompare(b) : b.localeCompare(a)
+                    );
+
+                    return (
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b" style={{ borderColor: borderActive }}>
+                            <th
+                              className="label-uppercase font-normal text-left pb-3 pt-2 cursor-pointer select-none transition-colors"
+                              style={{ color: "hsl(var(--muted-foreground))" }}
+                              onClick={() => setDateSortAsc(prev => !prev)}
+                              onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
+                              onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                            >Date</th>
+                            <th className="label-uppercase font-normal text-left pb-3 pt-2">Product</th>
+                            <th className="label-uppercase font-normal text-center pb-3 pt-2">Starting Bal</th>
+                            <th className="label-uppercase font-normal text-center pb-3 pt-2">Qty</th>
+                            <th className="label-uppercase font-normal text-center pb-3 pt-2">Ending Bal</th>
                           </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  )}
+                        </thead>
+                        <tbody>
+                          {/* Recent rows (≤7 days) — shown individually */}
+                          {recentRows.map((row, idx) => {
+                            const nextRow = recentRows[idx + 1];
+                            const isDateBreak = (nextRow && nextRow.Date !== row.Date) || (!nextRow && olderDates.length > 0);
+                            return (
+                              <tr key={row.id} className="table-row-hover" style={{ borderBottom: `1px solid ${isDateBreak ? "hsl(var(--foreground))" : border}` }}>
+                                <td className="text-[12px] font-light py-3">
+                                  {new Date(row.Date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                                </td>
+                                <td className="text-[13px] font-light py-3">{row["Product Name"]}</td>
+                                <td className="text-[13px] font-light py-3 text-center" style={dim}>{row["Starting Balance"]}</td>
+                                <td className="text-[13px] font-light py-3 text-center" style={{ color: "hsl(var(--green))" }}>{row.Qty > 0 ? "+" : ""}{row.Qty}</td>
+                                <td className="text-[13px] font-light py-3 text-center">{row["Ending Balance"]}</td>
+                              </tr>
+                            );
+                          })}
+                          {/* Older rows (>7 days) — grouped by date, expandable */}
+                          {olderDates.map((date, di) => {
+                            const rows = olderByDate.get(date)!;
+                            const isExpanded = expandedOrderDates.has(date);
+                            const isLast = di === olderDates.length - 1;
+                            return (
+                              <>
+                                <tr
+                                  key={`order-group-${date}`}
+                                  className="cursor-pointer"
+                                  style={{ borderBottom: `1px solid ${isExpanded ? "hsl(var(--border-active))" : border}` }}
+                                  onClick={() => toggleOrderDate(date)}
+                                  onMouseEnter={e => (e.currentTarget.style.background = "hsl(var(--card))")}
+                                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                                >
+                                  <td className="text-[12px] font-light py-3" style={dim}>
+                                    {new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                                  </td>
+                                  <td className="text-[12px] font-light py-3" style={dim}>
+                                    {rows.length} {rows.length === 1 ? "item" : "items"}
+                                  </td>
+                                  <td colSpan={2} />
+                                  <td className="py-3 text-center">
+                                    <span style={{ ...dim, fontSize: "11px", display: "inline-block", transition: "transform 0.15s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                                  </td>
+                                </tr>
+                                {isExpanded && rows.map((row, ri) => (
+                                  <tr key={row.id} className="table-row-hover" style={{ borderBottom: `1px solid ${ri === rows.length - 1 ? (isLast ? border : "hsl(var(--foreground))") : border}`, background: "hsl(var(--card))" }}>
+                                    <td className="text-[12px] font-light py-2.5 pl-2" style={dim}>—</td>
+                                    <td className="text-[13px] font-light py-2.5">{row["Product Name"]}</td>
+                                    <td className="text-[13px] font-light py-2.5 text-center" style={dim}>{row["Starting Balance"]}</td>
+                                    <td className="text-[13px] font-light py-2.5 text-center" style={{ color: "hsl(var(--green))" }}>{row.Qty > 0 ? "+" : ""}{row.Qty}</td>
+                                    <td className="text-[13px] font-light py-2.5 text-center">{row["Ending Balance"]}</td>
+                                  </tr>
+                                ))}
+                              </>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -1474,58 +1549,114 @@ export default function Stock() {
               </div>
               {activityLog.length === 0 ? (
                 <p className="text-[13px]" style={dim}>No entries yet</p>
-              ) : (
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b" style={{ borderColor: borderActive }}>
-                      <th
-                        className="label-uppercase font-normal text-left pb-3 pt-2 cursor-pointer select-none transition-colors"
-                        style={{ color: "hsl(var(--muted-foreground))" }}
-                        onClick={() => setDateSortAsc(prev => !prev)}
-                        onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
-                        onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
-                      >Date</th>
-                      <th className="label-uppercase font-normal text-left pb-3 pt-2">Product</th>
-                      <th className="label-uppercase font-normal text-center pb-3 pt-2">Type</th>
-                      <th className="label-uppercase font-normal text-center pb-3 pt-2">Qty</th>
-                      <th className="label-uppercase font-normal text-center pb-3 pt-2">Ending Bal</th>
-                      <th className="w-6" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activityLog.map((row, idx) => {
-                      const canReverse = row.Date === today || row.Date === yesterdayStr;
-                      const nextRow = activityLog[idx + 1];
-                      const isDateBreak = nextRow && nextRow.Date !== row.Date;
-                      return (
-                        <tr key={row.id} className="table-row-hover" style={{ borderBottom: `1px solid ${isDateBreak ? "hsl(var(--foreground))" : border}` }}>
-                          <td className="text-[12px] font-light py-3">
-                            {new Date(row.Date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                          </td>
-                          <td className="text-[13px] font-light py-3 text-dim">{row["Product Name"]}</td>
-                          <td className="text-[11px] font-light py-3 text-center tracking-wider uppercase" style={dim}>{row.Type}</td>
-                          <td className="text-[13px] font-light py-3 text-center" style={{ color: row.Qty < 0 ? "hsl(var(--red))" : "hsl(var(--green))" }}>{row.Qty}</td>
-                          <td className="text-[13px] font-light py-3 text-center">{row["Ending Balance"]}</td>
-                          <td className="py-3 text-center">
-                            {canReverse && (
-                              <button
-                                onClick={() => reverseUsage(row)}
-                                disabled={reversing === row.id}
-                                className="transition-colors"
-                                style={{ color: "hsl(var(--muted-foreground))", opacity: reversing === row.id ? 0.4 : 1 }}
-                                onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
-                                onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
-                              >
-                                <X size={13} />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
+              ) : (() => {
+                // Split into recent (≤7 days) shown individually, and older grouped by date
+                const recentRows = activityLog.filter(r => r.Date >= cutoff7Str);
+                const olderRows = activityLog.filter(r => r.Date < cutoff7Str);
+
+                // Group older rows by date
+                const olderByDate = new Map<string, LogRow[]>();
+                olderRows.forEach(r => {
+                  if (!olderByDate.has(r.Date)) olderByDate.set(r.Date, []);
+                  olderByDate.get(r.Date)!.push(r);
+                });
+                const olderDates = [...olderByDate.keys()].sort((a, b) =>
+                  dateSortAsc ? a.localeCompare(b) : b.localeCompare(a)
+                );
+
+                return (
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b" style={{ borderColor: borderActive }}>
+                        <th
+                          className="label-uppercase font-normal text-left pb-3 pt-2 cursor-pointer select-none transition-colors"
+                          style={{ color: "hsl(var(--muted-foreground))" }}
+                          onClick={() => setDateSortAsc(prev => !prev)}
+                          onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
+                          onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                        >Date</th>
+                        <th className="label-uppercase font-normal text-left pb-3 pt-2">Product</th>
+                        <th className="label-uppercase font-normal text-center pb-3 pt-2">Type</th>
+                        <th className="label-uppercase font-normal text-center pb-3 pt-2">Qty</th>
+                        <th className="label-uppercase font-normal text-center pb-3 pt-2">Ending Bal</th>
+                        <th className="w-6" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* Recent rows (≤7 days) — shown individually */}
+                      {recentRows.map((row, idx) => {
+                        const canReverse = row.Date === today || row.Date === yesterdayStr;
+                        const nextRow = recentRows[idx + 1];
+                        const isDateBreak = (nextRow && nextRow.Date !== row.Date) || (!nextRow && olderDates.length > 0);
+                        return (
+                          <tr key={row.id} className="table-row-hover" style={{ borderBottom: `1px solid ${isDateBreak ? "hsl(var(--foreground))" : border}` }}>
+                            <td className="text-[12px] font-light py-3">
+                              {new Date(row.Date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                            </td>
+                            <td className="text-[13px] font-light py-3 text-dim">{row["Product Name"]}</td>
+                            <td className="text-[11px] font-light py-3 text-center tracking-wider uppercase" style={dim}>{row.Type}</td>
+                            <td className="text-[13px] font-light py-3 text-center" style={{ color: row.Qty < 0 ? "hsl(var(--red))" : "hsl(var(--green))" }}>{row.Qty}</td>
+                            <td className="text-[13px] font-light py-3 text-center">{row["Ending Balance"]}</td>
+                            <td className="py-3 text-center">
+                              {canReverse && (
+                                <button
+                                  onClick={() => reverseUsage(row)}
+                                  disabled={reversing === row.id}
+                                  className="transition-colors"
+                                  style={{ color: "hsl(var(--muted-foreground))", opacity: reversing === row.id ? 0.4 : 1 }}
+                                  onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
+                                  onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                                >
+                                  <X size={13} />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {/* Older rows (>7 days) — grouped by date, expandable */}
+                      {olderDates.map((date, di) => {
+                        const rows = olderByDate.get(date)!;
+                        const isExpanded = expandedActivityDates.has(date);
+                        const isLast = di === olderDates.length - 1;
+                        return (
+                          <>
+                            <tr
+                              key={`group-${date}`}
+                              className="cursor-pointer"
+                              style={{ borderBottom: `1px solid ${isExpanded ? "hsl(var(--border-active))" : border}` }}
+                              onClick={() => toggleActivityDate(date)}
+                              onMouseEnter={e => (e.currentTarget.style.background = "hsl(var(--card))")}
+                              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                            >
+                              <td className="text-[12px] font-light py-3" style={dim}>
+                                {new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                              </td>
+                              <td className="text-[12px] font-light py-3" style={dim}>
+                                {rows.length} {rows.length === 1 ? "entry" : "entries"}
+                              </td>
+                              <td colSpan={3} />
+                              <td className="py-3 text-center">
+                                <span style={{ ...dim, fontSize: "11px", display: "inline-block", transition: "transform 0.15s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                              </td>
+                            </tr>
+                            {isExpanded && rows.map((row, ri) => (
+                              <tr key={row.id} className="table-row-hover" style={{ borderBottom: `1px solid ${ri === rows.length - 1 ? (isLast ? border : "hsl(var(--foreground))") : border}`, background: "hsl(var(--card))" }}>
+                                <td className="text-[12px] font-light py-2.5 pl-2" style={dim}>—</td>
+                                <td className="text-[13px] font-light py-2.5 text-dim">{row["Product Name"]}</td>
+                                <td className="text-[11px] font-light py-2.5 text-center tracking-wider uppercase" style={dim}>{row.Type}</td>
+                                <td className="text-[13px] font-light py-2.5 text-center" style={{ color: row.Qty < 0 ? "hsl(var(--red))" : "hsl(var(--green))" }}>{row.Qty}</td>
+                                <td className="text-[13px] font-light py-2.5 text-center">{row["Ending Balance"]}</td>
+                                <td />
+                              </tr>
+                            ))}
+                          </>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                );
+              })()}
             </div>
           )}
 
@@ -1670,7 +1801,7 @@ export default function Stock() {
               <div>
                 <div className="border-t pt-8 mb-6" style={{ borderColor: "hsl(var(--border))" }}>
                   <h3 className="text-[13px] font-light tracking-tight mb-1">All Orders</h3>
-                  <p className="text-[10px] tracking-wider uppercase" style={dim}>Last 31 days</p>
+                  <p className="text-[10px] tracking-wider uppercase" style={dim}>Last 60 days</p>
                 </div>
                 <table className="w-full border-collapse">
                   <thead>
