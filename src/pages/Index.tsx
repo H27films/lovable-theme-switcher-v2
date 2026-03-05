@@ -105,15 +105,25 @@ const Index = () => {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await (supabase as any)
-        .from("OfficeBalance")
-        .select("*")
-        .limit(10000);
-      if (error) console.error("Fetch error:", error);
-      if (data) {
-        console.log(`OfficeBalance fetched: ${data.length} products`, data.map((p: any) => p["PRODUCT NAME"]));
-        setProducts(data);
+      let allData: any[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      while (true) {
+        const { data, error } = await (supabase as any)
+          .from("OfficeBalance")
+          .select("*")
+          .range(from, from + batchSize - 1);
+        if (error) { console.error("Fetch error:", error); break; }
+        if (data && data.length > 0) {
+          allData = allData.concat(data);
+          if (data.length < batchSize) break;
+          from += batchSize;
+        } else {
+          break;
+        }
       }
+      console.log(`OfficeBalance fetched: ${allData.length} products`);
+      setProducts(allData);
     } catch (err) {
       console.error("Error fetching office products:", err);
     }
