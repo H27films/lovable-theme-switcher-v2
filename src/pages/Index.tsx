@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
 import ThemeToggle from "@/components/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, Home, X, ChevronLeft, ChevronRight, AlertTriangle, ChevronUp, ChevronDown, ClipboardList, Plus } from "lucide-react";
+import { ArrowRight, Home, X, ChevronLeft, ChevronRight, AlertTriangle, ChevronUp, ChevronDown, ClipboardList, Plus, RefreshCw } from "lucide-react";
 
 interface OfficeProduct {
   id: number;
@@ -298,7 +298,7 @@ const Index = () => {
                 className="nav-link flex items-center gap-1"
                 style={{ color: "hsl(var(--foreground))" }}
               >
-                Refresh <Download size={13} className="inline -mt-0.5" />
+                Refresh <RefreshCw size={13} className="inline -mt-0.5" />
               </button>
             </div>
           </div>
