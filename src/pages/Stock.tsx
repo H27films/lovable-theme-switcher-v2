@@ -572,28 +572,34 @@ export default function Stock() {
       await (supabase as any).from("BoudoirLog").delete().eq("id", row.id);
       // Restore Office Balance
       try {
-        const { data: officeData } = await (supabase as any)
+        const { data: officeData, error: officeSelectErr } = await (supabase as any)
           .from("OfficeBalance")
           .select("id, \"OFFICE BALANCE\"")
           .eq("PRODUCT NAME", row["Product Name"])
-          .single();
-        if (officeData) {
+          .maybeSingle();
+        if (officeSelectErr) {
+          console.error("OfficeBalance select error (reverseOrder):", officeSelectErr);
+        } else if (officeData) {
           const restoredBalance = Number(officeData["OFFICE BALANCE"] ?? 0) + Number(row["Qty"] ?? 0);
-          await (supabase as any).from("OfficeBalance")
+          const { error: officeUpdateErr } = await (supabase as any).from("OfficeBalance")
             .update({ "OFFICE BALANCE": restoredBalance })
             .eq("id", officeData.id);
+          if (officeUpdateErr) console.error("OfficeBalance update error (reverseOrder):", officeUpdateErr);
+        } else {
+          console.warn("OfficeBalance row not found for product:", row["Product Name"]);
         }
-      } catch (officeErr) { console.warn("Office balance restore error:", officeErr); }
+      } catch (officeErr) { console.error("Office balance restore error:", officeErr); }
       // Remove matching OfficeLog entry
       try {
-        await (supabase as any).from("OfficeLog")
+        const { error: logDelErr } = await (supabase as any).from("OfficeLog")
           .delete()
           .eq("Product Name", row["Product Name"])
           .eq("Type", "Branch Order")
           .eq("Branch", "Boudoir")
           .eq("Qty", row["Qty"])
           .eq("Date", row["Date"]);
-      } catch (logErr) { console.warn("OfficeLog delete error:", logErr); }
+        if (logDelErr) console.error("OfficeLog delete error (reverseOrder):", logDelErr);
+      } catch (logErr) { console.error("OfficeLog delete error:", logErr); }
       await fetchBalances();
       await fetchLog();
     } catch (err) { console.error("Reverse error:", err); }
@@ -629,28 +635,34 @@ export default function Stock() {
       await (supabase as any).from("BoudoirLog").delete().eq("id", row.id);
       // Restore Office Balance
       try {
-        const { data: officeData } = await (supabase as any)
+        const { data: officeData, error: officeSelectErr } = await (supabase as any)
           .from("OfficeBalance")
           .select("id, \"OFFICE BALANCE\"")
           .eq("PRODUCT NAME", row["Product Name"])
-          .single();
-        if (officeData) {
+          .maybeSingle();
+        if (officeSelectErr) {
+          console.error("OfficeBalance select error (handleOrderRowDelete):", officeSelectErr);
+        } else if (officeData) {
           const restoredBalance = Number(officeData["OFFICE BALANCE"] ?? 0) + Number(row["Qty"] ?? 0);
-          await (supabase as any).from("OfficeBalance")
+          const { error: officeUpdateErr } = await (supabase as any).from("OfficeBalance")
             .update({ "OFFICE BALANCE": restoredBalance })
             .eq("id", officeData.id);
+          if (officeUpdateErr) console.error("OfficeBalance update error (handleOrderRowDelete):", officeUpdateErr);
+        } else {
+          console.warn("OfficeBalance row not found for product:", row["Product Name"]);
         }
-      } catch (officeErr) { console.warn("Office balance restore error:", officeErr); }
+      } catch (officeErr) { console.error("Office balance restore error:", officeErr); }
       // Remove matching OfficeLog entry
       try {
-        await (supabase as any).from("OfficeLog")
+        const { error: logDelErr } = await (supabase as any).from("OfficeLog")
           .delete()
           .eq("Product Name", row["Product Name"])
           .eq("Type", "Branch Order")
           .eq("Branch", "Boudoir")
           .eq("Qty", row["Qty"])
           .eq("Date", row["Date"]);
-      } catch (logErr) { console.warn("OfficeLog delete error:", logErr); }
+        if (logDelErr) console.error("OfficeLog delete error (handleOrderRowDelete):", logDelErr);
+      } catch (logErr) { console.error("OfficeLog delete error:", logErr); }
       await fetchBalances();
       await fetchLog();
     } catch (err) { console.error("Delete order row error:", err); }

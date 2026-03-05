@@ -107,9 +107,13 @@ const Index = () => {
     try {
       const { data, error } = await (supabase as any)
         .from("OfficeBalance")
-        .select("*");
+        .select("*")
+        .limit(10000);
       if (error) console.error("Fetch error:", error);
-      if (data) setProducts(data);
+      if (data) {
+        console.log(`OfficeBalance fetched: ${data.length} products`, data.map((p: any) => p["PRODUCT NAME"]));
+        setProducts(data);
+      }
     } catch (err) {
       console.error("Error fetching office products:", err);
     }
@@ -1007,3 +1011,5 @@ const Index = () => {
     </div>
   );
 };
+
+export default Index;
