@@ -564,10 +564,36 @@ export default function Stock() {
   const reverseOrder = async (row: LogRow) => {
     setReversing(row.id);
     try {
+      // Restore Boudoir Balance
       await (supabase as any).from("Boudoir Balance")
         .update({ "Starting Balance": row["Starting Balance"] })
         .eq("Product Name", row["Product Name"]);
+      // Delete from BoudoirLog
       await (supabase as any).from("BoudoirLog").delete().eq("id", row.id);
+      // Restore Office Balance
+      try {
+        const { data: officeData } = await (supabase as any)
+          .from("OfficeBalance")
+          .select("id, \"OFFICE BALANCE\"")
+          .eq("PRODUCT NAME", row["Product Name"])
+          .single();
+        if (officeData) {
+          const restoredBalance = Number(officeData["OFFICE BALANCE"] ?? 0) + Number(row["Qty"] ?? 0);
+          await (supabase as any).from("OfficeBalance")
+            .update({ "OFFICE BALANCE": restoredBalance })
+            .eq("id", officeData.id);
+        }
+      } catch (officeErr) { console.warn("Office balance restore error:", officeErr); }
+      // Remove matching OfficeLog entry
+      try {
+        await (supabase as any).from("OfficeLog")
+          .delete()
+          .eq("Product Name", row["Product Name"])
+          .eq("Type", "Branch Order")
+          .eq("Branch", "Boudoir")
+          .eq("Qty", row["Qty"])
+          .eq("Date", row["Date"]);
+      } catch (logErr) { console.warn("OfficeLog delete error:", logErr); }
       await fetchBalances();
       await fetchLog();
     } catch (err) { console.error("Reverse error:", err); }
@@ -595,10 +621,36 @@ export default function Stock() {
   const handleOrderRowDelete = async (row: LogRow) => {
     setSavingOrderEdit(row.id);
     try {
+      // Restore Boudoir Balance
       await (supabase as any).from("Boudoir Balance")
         .update({ "Starting Balance": row["Starting Balance"] })
         .eq("Product Name", row["Product Name"]);
+      // Delete from BoudoirLog
       await (supabase as any).from("BoudoirLog").delete().eq("id", row.id);
+      // Restore Office Balance
+      try {
+        const { data: officeData } = await (supabase as any)
+          .from("OfficeBalance")
+          .select("id, \"OFFICE BALANCE\"")
+          .eq("PRODUCT NAME", row["Product Name"])
+          .single();
+        if (officeData) {
+          const restoredBalance = Number(officeData["OFFICE BALANCE"] ?? 0) + Number(row["Qty"] ?? 0);
+          await (supabase as any).from("OfficeBalance")
+            .update({ "OFFICE BALANCE": restoredBalance })
+            .eq("id", officeData.id);
+        }
+      } catch (officeErr) { console.warn("Office balance restore error:", officeErr); }
+      // Remove matching OfficeLog entry
+      try {
+        await (supabase as any).from("OfficeLog")
+          .delete()
+          .eq("Product Name", row["Product Name"])
+          .eq("Type", "Branch Order")
+          .eq("Branch", "Boudoir")
+          .eq("Qty", row["Qty"])
+          .eq("Date", row["Date"]);
+      } catch (logErr) { console.warn("OfficeLog delete error:", logErr); }
       await fetchBalances();
       await fetchLog();
     } catch (err) { console.error("Delete order row error:", err); }

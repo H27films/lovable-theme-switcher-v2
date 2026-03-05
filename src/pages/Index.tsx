@@ -178,7 +178,7 @@ const Index = () => {
           .from("OfficeBalance")
           .update({ "OFFICE BALANCE": endingBalance })
           .eq("id", chosenProduct.id);
-        await (supabase as any).from("OfficeLog").insert({
+        const { error: logError } = await (supabase as any).from("OfficeLog").insert({
           "Date": today,
           "Product Name": chosenProduct["PRODUCT NAME"],
           "Type": "Supplier Order",
@@ -187,6 +187,7 @@ const Index = () => {
           "Starting Balance": currentBalance,
           "Ending Balance": endingBalance,
         });
+        if (logError) console.error("OfficeLog insert error (supplier order):", logError);
       }
       await fetchProducts();
       setOrderLines([]);
@@ -1006,5 +1007,3 @@ const Index = () => {
     </div>
   );
 };
-
-export default Index;
