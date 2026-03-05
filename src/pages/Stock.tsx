@@ -497,6 +497,8 @@ export default function Stock() {
         const endingBalance = currentBalance - Number(entry.qty);
         await (supabase as any).from("BoudoirLog").insert({
           "Date": getDateStr(usageDate),
+          "Product Name": entry.productName,
+          "Type": entry.type === "customer" ? "Customer" : "Salon Use",
           "Qty": -Number(entry.qty),
           "Starting Balance": currentBalance,
           "Ending Balance": endingBalance,
