@@ -90,7 +90,8 @@ const Index = () => {
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
-  const [orderSupplierFilter, setOrderSupplierFilter] = useState<string>("all");
+  const [orderSupplierFilter, setOrderSupplierFilter] = useState<string[]>([]);
+  const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
   const [orderLines, setOrderLines] = useState<{ product: OfficeProduct; supplierChoice: string | null; qty: number }[]>([]);
   const [orderSearch, setOrderSearch] = useState("");
   const [showOrderDropdown, setShowOrderDropdown] = useState(false);
@@ -285,9 +286,9 @@ const Index = () => {
   const allSuppliers = [...new Set(products.map(p => p["SUPPLIER"]).filter(Boolean))].sort() as string[];
 
   // Products filtered by supplier for order panel
-  const orderPanelProducts = orderSupplierFilter === "all"
+  const orderPanelProducts = orderSupplierFilter.length === 0
     ? products
-    : products.filter(p => p["SUPPLIER"] === orderSupplierFilter);
+    : products.filter(p => orderSupplierFilter.includes(p["SUPPLIER"] ?? ""));
 
   // Unique product names in order panel (after supplier filter)
   const orderDropdownResults = orderSearch.length > 0
@@ -395,7 +396,7 @@ const Index = () => {
               <span
                 className="nav-link flex items-center gap-0.5 mb-1"
                 style={{ color: "hsl(var(--foreground))" }}
-                onClick={() => { setShowOrderPanel(true); setOrderLines([]); setOrderSearch(""); setOrderSupplierFilter("all"); }}
+                onClick={() => { setShowOrderPanel(true); setOrderLines([]); setOrderSearch(""); setOrderSupplierFilter([]); setShowSupplierDropdown(false); }}
               >
                 Order <ClipboardList size={13} className="inline -mt-0.5" />
               </span>
@@ -839,32 +840,56 @@ const Index = () => {
               </button>
             </div>
 
-            {/* Supplier filter */}
-            <div className="mb-6">
-              <p className="text-[10px] tracking-wider uppercase mb-3" style={dim}>Filter by Supplier</p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setOrderSupplierFilter("all")}
-                  className="px-3 py-1.5 text-[11px] tracking-wider uppercase transition-colors"
-                  style={{
-                    border: `1px solid ${orderSupplierFilter === "all" ? borderActive : border}`,
-                    color: orderSupplierFilter === "all" ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
-                    background: orderSupplierFilter === "all" ? cardBg : "transparent",
-                  }}
-                >All</button>
-                {allSuppliers.map(s => (
+            {/* Supplier filter — compact multi-select dropdown */}
+            <div className="mb-4 relative">
+              <button
+                onClick={() => setShowSupplierDropdown(v => !v)}
+                className="flex items-center gap-2 text-[11px] tracking-wider uppercase transition-colors px-3 py-1.5"
+                style={{
+                  border: `1px solid ${orderSupplierFilter.length > 0 ? borderActive : border}`,
+                  color: orderSupplierFilter.length > 0 ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+                  minWidth: "180px",
+                  background: "transparent",
+                }}
+              >
+                <span className="flex-1 text-left">
+                  {orderSupplierFilter.length === 0
+                    ? "All Suppliers"
+                    : orderSupplierFilter.length === 1
+                      ? orderSupplierFilter[0]
+                      : `${orderSupplierFilter.length} suppliers`}
+                </span>
+                <ChevronRight size={10} style={{ transform: showSupplierDropdown ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s" }} />
+              </button>
+              {showSupplierDropdown && (
+                <div
+                  className="absolute top-full left-0 z-50 border min-w-[180px] py-1 max-h-[220px] overflow-y-auto scrollbar-thin"
+                  style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px" }}
+                >
+                  {/* Clear all */}
                   <button
-                    key={s}
-                    onClick={() => setOrderSupplierFilter(s)}
-                    className="px-3 py-1.5 text-[11px] tracking-wider uppercase transition-colors"
-                    style={{
-                      border: `1px solid ${orderSupplierFilter === s ? borderActive : border}`,
-                      color: orderSupplierFilter === s ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
-                      background: orderSupplierFilter === s ? cardBg : "transparent",
-                    }}
-                  >{s}</button>
-                ))}
-              </div>
+                    className="w-full text-left px-3 py-2 text-[11px] tracking-wider uppercase transition-colors"
+                    style={{ color: orderSupplierFilter.length === 0 ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))", borderBottom: `1px solid ${border}` }}
+                    onClick={() => setOrderSupplierFilter([])}
+                  >All Suppliers</button>
+                  {allSuppliers.map(s => {
+                    const selected = orderSupplierFilter.includes(s);
+                    return (
+                      <button
+                        key={s}
+                        className="w-full text-left px-3 py-2 text-[11px] tracking-wider uppercase transition-colors flex items-center gap-2"
+                        style={{ color: selected ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))", background: selected ? cardBg : "transparent" }}
+                        onClick={() => setOrderSupplierFilter(prev =>
+                          prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
+                        )}
+                      >
+                        <span style={{ width: 10, height: 10, border: `1px solid ${selected ? borderActive : border}`, display: "inline-block", background: selected ? "hsl(var(--foreground))" : "transparent", flexShrink: 0 }} />
+                        {s}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Add product search */}
@@ -905,7 +930,7 @@ const Index = () => {
                     >
                       <div>
                         <span className="text-[13px] font-light">{p["PRODUCT NAME"]}</span>
-                        {orderSupplierFilter === "all" && p["SUPPLIER"] && (
+                        {orderSupplierFilter.length === 0 && p["SUPPLIER"] && (
                           <span className="text-[11px] ml-2" style={dim}>{p["SUPPLIER"]}</span>
                         )}
                       </div>
@@ -1015,9 +1040,26 @@ const Index = () => {
 
                 {/* Summary + Confirm */}
                 <div className="mt-6 pt-4 border-t" style={{ borderColor: border }}>
-                  <p className="text-[11px] tracking-wider uppercase mb-1" style={dim}>
-                    {orderLines.length} {orderLines.length === 1 ? "item" : "items"} · {orderLines.reduce((s, l) => s + l.qty, 0)} units total
-                  </p>
+                  {(() => {
+                    const totalUnits = orderLines.length;
+                    const totalQty = orderLines.reduce((s, l) => s + l.qty, 0);
+                    const totalValue = orderLines.reduce((sum, line) => {
+                      const chosenProduct = line.supplierChoice
+                        ? products.find(p => p["PRODUCT NAME"] === line.product["PRODUCT NAME"] && p["SUPPLIER"] === line.supplierChoice) ?? line.product
+                        : line.product;
+                      return sum + ((chosenProduct["SUPPLIER PRICE"] ?? 0) * line.qty);
+                    }, 0);
+                    return (
+                      <div className="mb-1 space-y-0.5">
+                        <p className="text-[11px] tracking-wider uppercase" style={dim}>
+                          {totalUnits} {totalUnits === 1 ? "item" : "items"} · {totalQty} units total
+                        </p>
+                        <p className="text-[11px] tracking-wider uppercase" style={{ color: "hsl(var(--foreground))" }}>
+                          Total Value: RM {totalValue.toFixed(2)}
+                        </p>
+                      </div>
+                    );
+                  })()}
                   {orderLines.some(l => l.supplierChoice === null && products.filter(s => s["PRODUCT NAME"] === l.product["PRODUCT NAME"] && s.id !== l.product.id).length > 0) && (
                     <p className="text-[11px] mt-1" style={{ color: "hsl(var(--red))" }}>
                       Please select a supplier for all items before submitting
