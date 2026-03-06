@@ -554,9 +554,12 @@ const Index = () => {
                     <thead>
                       <tr className="border-b" style={{ borderColor: border }}>
                         <th className="text-left text-[10px] tracking-wider uppercase pb-2 pr-5 font-normal" style={dim}>Date</th>
-                        <th className="text-left text-[10px] tracking-wider uppercase pb-2 pr-5 font-normal" style={dim}>From / To</th>
+                        <th className="text-left text-[10px] tracking-wider uppercase pb-2 pr-5 font-normal" style={dim}>Product</th>
+                        <th className="text-left text-[10px] tracking-wider uppercase pb-2 pr-5 font-normal" style={dim}>Branch</th>
+                        <th className="text-left text-[10px] tracking-wider uppercase pb-2 pr-5 font-normal" style={dim}>Supplier</th>
                         <th className="text-center text-[10px] tracking-wider uppercase pb-2 pr-5 font-normal" style={dim}>QTY</th>
-                        <th className="text-center text-[10px] tracking-wider uppercase pb-2 font-normal" style={dim}>Office Balance</th>
+                        <th className="text-center text-[10px] tracking-wider uppercase pb-2 pr-5 font-normal" style={dim}>Office Balance</th>
+                        <th className="text-left text-[10px] tracking-wider uppercase pb-2 font-normal" style={dim}>GRN</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -568,9 +571,12 @@ const Index = () => {
                         return (
                           <tr key={i} className="border-b last:border-0" style={{ borderColor: border }}>
                             <td className="text-[12px] font-light py-2 pr-5">{fmtActivityDate(a.DATE)}</td>
-                            <td className="text-[12px] font-light py-2 pr-5">{label}</td>
+                            <td className="text-[12px] font-light py-2 pr-5">{a["PRODUCT NAME"] ?? "—"}</td>
+                            <td className="text-[12px] font-light py-2 pr-5">{a["BRANCH"] ?? "—"}</td>
+                            <td className="text-[12px] font-light py-2 pr-5">{a["SUPPLIER"] ?? "—"}</td>
                             <td className="text-[12px] font-light py-2 pr-5 text-center" style={{ color: qtyColor }}>{qtySign}</td>
-                            <td className="text-[12px] font-light py-2 text-center">{a["OFFICE BALANCE"] ?? "—"}</td>
+                            <td className="text-[12px] font-light py-2 pr-5 text-center">{a["OFFICE BALANCE"] ?? "—"}</td>
+                            <td className="text-[12px] font-light py-2">{a["GRN"] ?? "—"}</td>
                           </tr>
                         );
                       })}
