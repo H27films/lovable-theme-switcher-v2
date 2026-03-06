@@ -1188,7 +1188,7 @@ const Index = () => {
                           }, 0);
 
                           return (
-                            <div key={supplier} className="mb-5">
+                            <div key={supplier} className={sIdx > 0 ? "mb-5 mt-8 pt-6 border-t" : "mb-5"} style={sIdx > 0 ? { borderColor: border } : {}}>
                               {/* Supplier header */}
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-[14.5px] font-semibold tracking-wide" style={{ color: "hsl(var(--foreground))" }}>{supplier}</span>
@@ -1252,11 +1252,34 @@ const Index = () => {
                         })}
 
                         {/* Grand total */}
-                        <div className="flex justify-between pt-2 border-t" style={{ borderColor: border }}>
-                          <span className="text-[14.5px] tracking-wider uppercase" style={dim}>
-                            {orderLines.length} {orderLines.length === 1 ? "item" : "items"} · {grandUnits} units
-                          </span>
-                          <span className="text-[14.5px] font-semibold" style={{ color: "hsl(var(--foreground))" }}>RM {grandTotal.toFixed(2)}</span>
+                        <div className="pt-3 mt-2 border-t" style={{ borderColor: border }}>
+                          {multi && (
+                            <div className="mb-2 space-y-1">
+                              {supplierNames.map((supplier, sIdx) => {
+                                const grpLines = groups[supplier];
+                                const grn = `OFFICE ${dateStr} (${sIdx + 1})`;
+                                const subtotal = grpLines.reduce((s, l) => {
+                                  const rp = l.supplierChoice
+                                    ? products.find(p => p["PRODUCT NAME"] === l.product["PRODUCT NAME"] && p["SUPPLIER"] === l.supplierChoice) ?? l.product
+                                    : l.product;
+                                  return s + (rp["SUPPLIER PRICE"] ?? 0) * l.qty;
+                                }, 0);
+                                const grpUnits = grpLines.reduce((s, l) => s + l.qty * (l.product["UNITS/ORDER"] ?? 1), 0);
+                                return (
+                                  <div key={supplier} className="flex justify-between text-[12.5px]" style={dim}>
+                                    <span>{supplier} · {grpLines.length} {grpLines.length === 1 ? "item" : "items"} · {grpUnits} units · {grn}</span>
+                                    <span>RM {subtotal.toFixed(2)}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span className="text-[14.5px] tracking-wider uppercase" style={dim}>
+                              {orderLines.length} {orderLines.length === 1 ? "item" : "items"} · {grandUnits} units
+                            </span>
+                            <span className="text-[14.5px] font-semibold" style={{ color: "hsl(var(--foreground))" }}>RM {grandTotal.toFixed(2)}</span>
+                          </div>
                         </div>
                       </div>
                     );
