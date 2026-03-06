@@ -494,6 +494,9 @@ const Index = () => {
                     <div className="flex items-center gap-3">
                       <span className="text-[13px] font-light">{p["PRODUCT NAME"]}</span>
                       {p["SUPPLIER"] && <span className="text-[11px]" style={dim}>{p["SUPPLIER"]}</span>}
+                      {(p["UNITS/ORDER"] ?? 1) > 1 && (
+                        <span className="text-[10px] tracking-wider uppercase px-1.5 py-0.5 rounded" style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>× {p["UNITS/ORDER"]} units</span>
+                      )}
                       {p["COLOUR"] === true && (
                         <span className="text-[10px] tracking-wider uppercase" style={dim}>Colour</span>
                       )}
