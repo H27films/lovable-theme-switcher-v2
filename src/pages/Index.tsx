@@ -645,6 +645,9 @@ const Index = () => {
                           >
                             <p className="text-[10px] tracking-wider uppercase mb-1" style={dim}>{s["SUPPLIER"] || "Unknown"}</p>
                             <p className="text-[15px] font-light">RM {fmtPrice(s["SUPPLIER PRICE"])}</p>
+                            {(s["UNITS/ORDER"] ?? 1) > 1 && (
+                              <p className="text-[10px] mt-0.5 font-medium" style={{ color: "hsl(var(--foreground))" }}>× {s["UNITS/ORDER"]} units/order</p>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -977,6 +980,9 @@ const Index = () => {
                         <span className="text-[13px] font-light">{p["PRODUCT NAME"]}</span>
                         {orderSupplierFilter.length === 0 && p["SUPPLIER"] && (
                           <span className="text-[11px] ml-2" style={dim}>{p["SUPPLIER"]}</span>
+                        )}
+                        {(p["UNITS/ORDER"] ?? 1) > 1 && (
+                          <span className="text-[10px] ml-2 font-medium" style={{ color: "hsl(var(--foreground))" }}>× {p["UNITS/ORDER"]} units/order</span>
                         )}
                       </div>
                       <span className="text-[12px] font-light" style={{
