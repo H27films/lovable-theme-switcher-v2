@@ -1044,7 +1044,7 @@ const Index = () => {
                                     onClick={() => setOrderLines(prev => prev.map((l, i) =>
                                       i === idx ? { ...l, supplierChoice: s["SUPPLIER"] } : l
                                     ))}
-                                    className="text-[14.5px] tracking-wider uppercase px-2 py-1 transition-colors"
+                                    className="text-[11.5px] tracking-wider uppercase px-2 py-1 transition-colors"
                                     style={{
                                       border: `1px solid ${line.supplierChoice === s["SUPPLIER"] ? borderActive : border}`,
                                       color: line.supplierChoice === s["SUPPLIER"] ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
