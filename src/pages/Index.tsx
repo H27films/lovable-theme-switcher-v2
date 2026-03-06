@@ -156,6 +156,7 @@ const Index = () => {
   useEffect(() => { setPage(0); }, [search, filterLowStock, filterColour, sortKey, sortDir]);
 
   // Fetch recent activity from AllFileLog when a product is selected
+  // Only show Order-type entries (supplier orders IN and branch orders OUT)
   useEffect(() => {
     if (!selectedProduct) { setRecentActivity([]); return; }
     const fetchActivity = async () => {
@@ -552,12 +553,14 @@ const Index = () => {
                         const label = isSupplierOrder ? (a.SUPPLIER ?? "Supplier") : (a.BRANCH ?? "Branch");
                         const qtySign = isSupplierOrder ? `+${a.QTY}` : `-${a.QTY}`;
                         const qtyColor = isSupplierOrder ? "hsl(var(--green, 142 71% 45%))" : "hsl(var(--red))";
+                        // Office Balance: use the OFFICE BALANCE snapshot from the log row
+                        const officeBalance = a["OFFICE BALANCE"] ?? "—";
                         return (
                           <tr key={i} className="border-b last:border-0" style={{ borderColor: border }}>
                             <td className="text-[12px] font-light py-2 pr-5">{fmtActivityDate(a.DATE)}</td>
                             <td className="text-[12px] font-light py-2 pr-5">{label}</td>
                             <td className="text-[12px] font-light py-2 pr-5 text-center" style={{ color: qtyColor }}>{qtySign}</td>
-                            <td className="text-[12px] font-light py-2 text-center">{a["ENDING BALANCE"]}</td>
+                            <td className="text-[12px] font-light py-2 text-center">{officeBalance}</td>
                           </tr>
                         );
                       })}
