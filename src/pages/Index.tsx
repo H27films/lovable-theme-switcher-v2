@@ -559,14 +559,12 @@ const Index = () => {
                         const label = isSupplierOrder ? (a.SUPPLIER ?? "Supplier") : (a.BRANCH ?? "Branch");
                         const qtySign = isSupplierOrder ? `+${a.QTY}` : `-${a.QTY}`;
                         const qtyColor = isSupplierOrder ? "hsl(var(--green, 142 71% 45%))" : "hsl(var(--red))";
-                        // Office Balance: always pull current value from AllFileProducts
-                        const officeBalance = selectedProduct["OFFICE BALANCE"] ?? "—";
                         return (
                           <tr key={i} className="border-b last:border-0" style={{ borderColor: border }}>
                             <td className="text-[12px] font-light py-2 pr-5">{fmtActivityDate(a.DATE)}</td>
                             <td className="text-[12px] font-light py-2 pr-5">{label}</td>
                             <td className="text-[12px] font-light py-2 pr-5 text-center" style={{ color: qtyColor }}>{qtySign}</td>
-                            <td className="text-[12px] font-light py-2 text-center">{officeBalance}</td>
+                            <td className="text-[12px] font-light py-2 text-center">{a["OFFICE BALANCE"] ?? "—"}</td>
                           </tr>
                         );
                       })}
