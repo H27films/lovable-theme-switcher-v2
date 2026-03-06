@@ -442,7 +442,7 @@ const Index = () => {
               <span
                 className="nav-link flex items-center gap-0.5 mb-1"
                 style={{ color: "hsl(var(--foreground))" }}
-                onClick={() => { setShowOrderPanel(true); setOrderLines([]); setOrderSearch(""); setOrderSupplierFilter([]); setShowSupplierDropdown(false); }}
+                onClick={() => { setShowOrderPanel(true); setOrderSearch(""); setShowSupplierDropdown(false); }}
               >
                 Order <ClipboardList size={13} className="inline -mt-0.5" />
               </span>
@@ -1018,7 +1018,18 @@ const Index = () => {
             {/* Order lines */}
             {orderLines.length > 0 && (
               <div>
-                <p className="text-[14.5px] tracking-wider uppercase mb-3" style={dim}>Order Items</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[14.5px] tracking-wider uppercase" style={dim}>Order Items</p>
+                  {orderLines.length > 0 && (
+                    <button
+                      onClick={() => setOrderLines([])}
+                      className="text-[11px] tracking-wider uppercase px-2 py-0.5 rounded transition-colors"
+                      style={{ color: "hsl(var(--muted-foreground))", border: `1px solid ${border}` }}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
                 <div className="space-y-3">
                   {orderLines.map((line, idx) => {
                     const siblings = products.filter(
