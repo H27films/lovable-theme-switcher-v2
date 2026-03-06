@@ -8,30 +8,33 @@ import { ArrowRight, Home, X, ChevronLeft, ChevronRight, AlertTriangle, ChevronU
 interface OfficeProduct {
   id: number;
   "PRODUCT NAME": string;
-  "SUPPLIER": string;
-  "UNITS PER ORDER": number | null;
+  "SUPPLIER": string | null;
+  "UNITS/ORDER": number | null;
   "SUPPLIER PRICE": number | null;
   "BRANCH PRICE": number | null;
   "STAFF PRICE": number | null;
   "CUSTOMER PRICE": number | null;
   "OFFICE BALANCE": number | null;
-  "PAR LEVEL": number | null;
-  "COLOUR": string | null;
+  "PAR": number | null;
+  "COLOUR": boolean | null;
   "OFFICE SECTION": string | null;
 }
 
 type SortKey = "PRODUCT NAME" | "SUPPLIER" | null;
 type SortDir = "asc" | "desc";
 
-interface OfficeLogRow {
+interface AllFileLogRow {
   id: number;
-  Date: string;
-  "Product Name": string;
-  Type: string;
-  Branch: string | null;
-  Qty: number;
-  "Starting Balance": number;
-  "Ending Balance": number;
+  DATE: string;
+  "PRODUCT NAME": string;
+  BRANCH: string | null;
+  SUPPLIER: string | null;
+  TYPE: string;
+  "STARTING BALANCE": number;
+  QTY: number;
+  "ENDING BALANCE": number;
+  GRN?: string | null;
+  "OFFICE BALANCE"?: number | null;
 }
 
 const fmtActivityDate = (d: string) => {
@@ -79,7 +82,7 @@ const Index = () => {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   // Recent activity state
-  const [recentActivity, setRecentActivity] = useState<OfficeLogRow[]>([]);
+  const [recentActivity, setRecentActivity] = useState<AllFileLogRow[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
 
   // Order panel state
@@ -110,7 +113,7 @@ const Index = () => {
       const batchSize = 1000;
       while (true) {
         const { data, error } = await (supabase as any)
-          .from("OfficeBalance")
+          .from("AllFileProducts")
           .select("*")
           .range(from, from + batchSize - 1);
         if (error) { console.error("Fetch error:", error); break; }
@@ -122,10 +125,9 @@ const Index = () => {
           break;
         }
       }
-      console.log(`OfficeBalance fetched: ${allData.length} products`);
       setProducts(allData);
     } catch (err) {
-      console.error("Error fetching office products:", err);
+      console.error("Error fetching products:", err);
     }
     setLoading(false);
   }, []);
@@ -152,17 +154,18 @@ const Index = () => {
 
   useEffect(() => { setPage(0); }, [search, filterLowStock, filterColour, sortKey, sortDir]);
 
-  // Fetch recent activity from OfficeLog when a product is selected
+  // Fetch recent activity from AllFileLog when a product is selected
   useEffect(() => {
     if (!selectedProduct) { setRecentActivity([]); return; }
     const fetchActivity = async () => {
       setActivityLoading(true);
       try {
         const { data, error } = await (supabase as any)
-          .from("OfficeLog")
+          .from("AllFileLog")
           .select("*")
-          .eq("Product Name", selectedProduct["PRODUCT NAME"])
-          .order("Date", { ascending: false })
+          .eq("PRODUCT NAME", selectedProduct["PRODUCT NAME"])
+          .eq("TYPE", "Order")
+          .order("DATE", { ascending: false })
           .limit(20);
         if (!error && data) setRecentActivity(data);
       } catch (err) { console.error("Activity fetch error:", err); }
@@ -188,20 +191,26 @@ const Index = () => {
           : line.product;
         const currentBalance = Number(chosenProduct["OFFICE BALANCE"] ?? 0);
         const endingBalance = currentBalance + line.qty;
+
+        // Update ALL rows for this product name
         await (supabase as any)
-          .from("OfficeBalance")
+          .from("AllFileProducts")
           .update({ "OFFICE BALANCE": endingBalance })
-          .eq("id", chosenProduct.id);
-        const { error: logError } = await (supabase as any).from("OfficeLog").insert({
-          "Date": today,
-          "Product Name": chosenProduct["PRODUCT NAME"],
-          "Type": "Supplier Order",
-          "Branch": null,
-          "Qty": line.qty,
-          "Starting Balance": currentBalance,
-          "Ending Balance": endingBalance,
+          .eq("PRODUCT NAME", chosenProduct["PRODUCT NAME"]);
+
+        // Log to AllFileLog
+        await (supabase as any).from("AllFileLog").insert({
+          "DATE": today,
+          "PRODUCT NAME": chosenProduct["PRODUCT NAME"],
+          "BRANCH": "Office",
+          "SUPPLIER": chosenProduct["SUPPLIER"] ?? null,
+          "TYPE": "Order",
+          "STARTING BALANCE": currentBalance,
+          "QTY": line.qty,
+          "ENDING BALANCE": endingBalance,
+          "OFFICE BALANCE": endingBalance,
+          "GRN": null,
         });
-        if (logError) console.error("OfficeLog insert error (supplier order):", logError);
       }
       await fetchProducts();
       setOrderLines([]);
@@ -222,11 +231,11 @@ const Index = () => {
         p["PRODUCT NAME"]?.toLowerCase().includes(search.toLowerCase()) ||
         p["SUPPLIER"]?.toLowerCase().includes(search.toLowerCase()) ||
         p["OFFICE SECTION"]?.toLowerCase().includes(search.toLowerCase());
-      const matchLow = !filterLowStock || checkBelowPar(p["OFFICE BALANCE"], p["PAR LEVEL"]);
+      const matchLow = !filterLowStock || checkBelowPar(p["OFFICE BALANCE"], p["PAR"]);
       const matchColour =
         filterColour === "all" ? true :
-        filterColour === "yes" ? p["COLOUR"]?.toLowerCase() === "yes" :
-        p["COLOUR"]?.toLowerCase() !== "yes";
+        filterColour === "yes" ? p["COLOUR"] === true :
+        p["COLOUR"] !== true;
       return matchSearch && matchLow && matchColour;
     })
     .sort((a, b) => {
@@ -245,7 +254,7 @@ const Index = () => {
 
   const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE);
   const pagedProducts = filteredProducts.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const lowStockCount = products.filter(p => checkBelowPar(p["OFFICE BALANCE"], p["PAR LEVEL"])).length;
+  const lowStockCount = products.filter(p => checkBelowPar(p["OFFICE BALANCE"], p["PAR"])).length;
 
   const dropdownResults = search.length > 0
     ? products.filter(p => p["PRODUCT NAME"]?.toLowerCase().includes(search.toLowerCase())).slice(0, 30)
@@ -263,7 +272,7 @@ const Index = () => {
   };
 
   // All unique suppliers
-  const allSuppliers = [...new Set(products.map(p => p["SUPPLIER"]).filter(Boolean))].sort();
+  const allSuppliers = [...new Set(products.map(p => p["SUPPLIER"]).filter(Boolean))].sort() as string[];
 
   // Products filtered by supplier for order panel
   const orderPanelProducts = orderSupplierFilter === "all"
@@ -441,12 +450,12 @@ const Index = () => {
                     <div className="flex items-center gap-3">
                       <span className="text-[13px] font-light">{p["PRODUCT NAME"]}</span>
                       {p["SUPPLIER"] && <span className="text-[11px]" style={dim}>{p["SUPPLIER"]}</span>}
-                      {p["COLOUR"]?.toLowerCase() === "yes" && (
+                      {p["COLOUR"] === true && (
                         <span className="text-[10px] tracking-wider uppercase" style={dim}>Colour</span>
                       )}
                     </div>
                     <span className="text-[12px] font-light" style={{
-                      color: checkBelowPar(p["OFFICE BALANCE"], p["PAR LEVEL"])
+                      color: checkBelowPar(p["OFFICE BALANCE"], p["PAR"])
                         ? "hsl(var(--red))" : "hsl(var(--foreground))"
                     }}>
                       {p["OFFICE BALANCE"] ?? "—"}
@@ -463,7 +472,7 @@ const Index = () => {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <p className="text-[11px] tracking-wider uppercase mb-1" style={dim}>
-                    {selectedProduct["COLOUR"]?.toLowerCase() === "yes" ? "Colour Product" : "Product"}
+                    {selectedProduct["COLOUR"] === true ? "Colour Product" : "Product"}
                     {selectedProduct["OFFICE SECTION"] && ` · Section ${selectedProduct["OFFICE SECTION"]}`}
                   </p>
                   <p className="text-[20px] font-light tracking-tight">{selectedProduct["PRODUCT NAME"]}</p>
@@ -486,11 +495,11 @@ const Index = () => {
                 <div>
                   <p className="text-[10px] tracking-wider uppercase mb-1" style={dim}>Office Balance</p>
                   <p className="text-[22px] font-light" style={{
-                    color: checkBelowPar(selectedProduct["OFFICE BALANCE"], selectedProduct["PAR LEVEL"])
+                    color: checkBelowPar(selectedProduct["OFFICE BALANCE"], selectedProduct["PAR"])
                       ? "hsl(var(--red))" : "hsl(var(--foreground))"
                   }}>
                     {selectedProduct["OFFICE BALANCE"] ?? "—"}
-                    {checkBelowPar(selectedProduct["OFFICE BALANCE"], selectedProduct["PAR LEVEL"]) && (
+                    {checkBelowPar(selectedProduct["OFFICE BALANCE"], selectedProduct["PAR"]) && (
                       <AlertTriangle size={14} className="inline ml-2 mb-1" style={{ color: "hsl(var(--red))" }} />
                     )}
                   </p>
@@ -536,18 +545,16 @@ const Index = () => {
                     </thead>
                     <tbody>
                       {recentActivity.map((a, i) => {
-                        const isSupplier = a.Type === "Supplier Order";
-                        const label = isSupplier
-                          ? (selectedProduct["SUPPLIER"] ?? "Supplier")
-                          : (a.Branch ?? "Branch");
-                        const qtySign = isSupplier ? `+${a.Qty}` : `-${a.Qty}`;
-                        const qtyColor = isSupplier ? "hsl(var(--green, 142 71% 45%))" : "hsl(var(--red))";
+                        const isSupplierOrder = a.BRANCH === "Office";
+                        const label = isSupplierOrder ? (a.SUPPLIER ?? "Supplier") : (a.BRANCH ?? "Branch");
+                        const qtySign = isSupplierOrder ? `+${a.QTY}` : `-${a.QTY}`;
+                        const qtyColor = isSupplierOrder ? "hsl(var(--green, 142 71% 45%))" : "hsl(var(--red))";
                         return (
                           <tr key={i} className="border-b last:border-0" style={{ borderColor: border }}>
-                            <td className="text-[12px] font-light py-2 pr-5">{fmtActivityDate(a.Date)}</td>
+                            <td className="text-[12px] font-light py-2 pr-5">{fmtActivityDate(a.DATE)}</td>
                             <td className="text-[12px] font-light py-2 pr-5">{label}</td>
                             <td className="text-[12px] font-light py-2 pr-5 text-center" style={{ color: qtyColor }}>{qtySign}</td>
-                            <td className="text-[12px] font-light py-2 text-center">{a["Ending Balance"]}</td>
+                            <td className="text-[12px] font-light py-2 text-center">{a["ENDING BALANCE"]}</td>
                           </tr>
                         );
                       })}
@@ -562,14 +569,14 @@ const Index = () => {
                   p => p["PRODUCT NAME"] === selectedProduct["PRODUCT NAME"] && p.id !== selectedProduct.id
                 );
                 if (sameProduct.length === 0) return null;
-                const allSuppliers = [selectedProduct, ...sameProduct];
+                const allSupplierRows = [selectedProduct, ...sameProduct];
                 return (
                   <div className="pt-4 border-t" style={{ borderColor: border }}>
                     <p className="text-[10px] tracking-wider uppercase mb-3" style={dim}>
-                      Supplier Comparison · {allSuppliers.length} suppliers
+                      Supplier Comparison · {allSupplierRows.length} suppliers
                     </p>
                     <div className="flex items-center gap-6">
-                      {allSuppliers.map(s => (
+                      {allSupplierRows.map(s => (
                         <div key={s.id} className="flex items-center gap-3">
                           <div
                             className="px-3 py-2"
@@ -720,7 +727,7 @@ const Index = () => {
                   </thead>
                   <tbody>
                     {pagedProducts.map(p => {
-                      const belowPar = checkBelowPar(p["OFFICE BALANCE"], p["PAR LEVEL"]);
+                      const belowPar = checkBelowPar(p["OFFICE BALANCE"], p["PAR"]);
                       const branchPrice = getBranchPrice(p["SUPPLIER PRICE"]);
                       return (
                         <tr
@@ -743,10 +750,10 @@ const Index = () => {
                           <td className="text-[12px] font-light py-3 pr-4 text-center" style={dim}>{fmtPrice(p["CUSTOMER PRICE"])}</td>
                           <td className="text-[12px] font-light py-3 pr-4" style={dim}>{p["OFFICE SECTION"] || "—"}</td>
                           <td className="text-[11px] font-light py-3 pr-4 text-center tracking-wider uppercase" style={dim}>
-                            {p["COLOUR"]?.toLowerCase() === "yes" ? "Colour" : "Product"}
+                            {p["COLOUR"] === true ? "Colour" : "Product"}
                           </td>
-                          <td className="text-[12px] font-light py-3 pr-4 text-center" style={dim}>{p["PAR LEVEL"] ?? "—"}</td>
-                          <td className="text-[12px] font-light py-3 text-center" style={dim}>{p["UNITS PER ORDER"] ?? "—"}</td>
+                          <td className="text-[12px] font-light py-3 pr-4 text-center" style={dim}>{p["PAR"] ?? "—"}</td>
+                          <td className="text-[12px] font-light py-3 text-center" style={dim}>{p["UNITS/ORDER"] ?? "—"}</td>
                         </tr>
                       );
                     })}
@@ -881,7 +888,7 @@ const Index = () => {
                         )}
                       </div>
                       <span className="text-[12px] font-light" style={{
-                        color: checkBelowPar(p["OFFICE BALANCE"], p["PAR LEVEL"])
+                        color: checkBelowPar(p["OFFICE BALANCE"], p["PAR"])
                           ? "hsl(var(--red))" : "hsl(var(--muted-foreground))"
                       }}>
                         {p["OFFICE BALANCE"] ?? "—"}
@@ -952,7 +959,7 @@ const Index = () => {
                         {/* Balance + Qty */}
                         <div className="flex items-center justify-between mt-2">
                           <span className="text-[11px]" style={dim}>
-                            Balance: <span style={{ color: checkBelowPar(line.product["OFFICE BALANCE"], line.product["PAR LEVEL"]) ? "hsl(var(--red))" : "hsl(var(--foreground))" }}>
+                            Balance: <span style={{ color: checkBelowPar(line.product["OFFICE BALANCE"], line.product["PAR"]) ? "hsl(var(--red))" : "hsl(var(--foreground))" }}>
                               {chosenSupplier?.["OFFICE BALANCE"] ?? line.product["OFFICE BALANCE"] ?? "—"}
                             </span>
                           </span>

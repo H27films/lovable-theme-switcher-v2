@@ -6,26 +6,36 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Plus, X, ChevronLeft, ChevronRight, Search, ChevronDown, FileText, Download, Home, Lock } from "lucide-react";
 import jsPDF from "jspdf";
 
-interface BalanceRow {
+interface AllFileProduct {
+  id: number;
   "PRODUCT NAME": string;
-  "CHIC NAILSPA BALANCE": number;
+  "SUPPLIER": string | null;
+  "SUPPLIER PRICE": number | null;
+  "BRANCH PRICE": number | null;
   "STAFF PRICE": number | null;
   "CUSTOMER PRICE": number | null;
-  "BRANCH PRICE": number | null;
+  "CHIC NAILSPA BALANCE": number;
+  "NUR YADI BALANCE": number;
+  "CHIC NAILSPA BALANCE": number;
+  "OFFICE BALANCE": number;
+  "PAR": number | null;
+  "UNITS/ORDER": number | null;
+  "COLOUR": boolean | null;
+  "OFFICE SECTION": string | null;
 }
 
 interface LogRow {
   id: number;
   DATE: string;
   "PRODUCT NAME": string;
+  BRANCH: string;
+  SUPPLIER: string | null;
   TYPE: string;
-  QTY: number;
   "STARTING BALANCE": number;
+  QTY: number;
   "ENDING BALANCE": number;
-  GRN?: string;
-  BRANCH?: string;
-  SUPPLIER?: string;
-  "OFFICE BALANCE"?: number;
+  GRN?: string | null;
+  "OFFICE BALANCE"?: number | null;
 }
 
 interface EntryLine {
@@ -57,9 +67,9 @@ const makeOrderEntries = (): OrderLine[] => [1,2,3,4,5].map(id => ({
   id, productName: "", qty: 1, showProductDropdown: false, productSearch: "",
 }));
 
-function ProductDropdown({ entry, sortedBalances, onSelect, onSearch, onToggle, onClose, showBalance }: {
+function ProductDropdown({ entry, sortedProducts, onSelect, onSearch, onToggle, onClose, showBalance }: {
   entry: { productName: string; showProductDropdown: boolean; productSearch: string };
-  sortedBalances: BalanceRow[];
+  sortedProducts: AllFileProduct[];
   onSelect: (name: string) => void;
   onSearch: (val: string) => void;
   onToggle: () => void;
@@ -75,8 +85,8 @@ function ProductDropdown({ entry, sortedBalances, onSelect, onSearch, onToggle, 
   const dim: React.CSSProperties = { color: "hsl(var(--muted-foreground))" };
 
   const filtered = entry.productSearch
-    ? sortedBalances.filter(b => b["PRODUCT NAME"].toLowerCase().includes(entry.productSearch.toLowerCase()))
-    : sortedBalances;
+    ? sortedProducts.filter(p => p["PRODUCT NAME"].toLowerCase().includes(entry.productSearch.toLowerCase()))
+    : sortedProducts;
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -147,22 +157,20 @@ function ProductDropdown({ entry, sortedBalances, onSelect, onSearch, onToggle, 
             />
           </div>
           <div ref={listRef} className="max-h-[200px] overflow-y-auto scrollbar-thin">
-            {filtered.map((row, i) => (
+            {filtered.map((p, i) => (
               <div
-                key={row["PRODUCT NAME"]}
+                key={p["PRODUCT NAME"]}
                 data-item
                 className="flex items-center justify-between px-3 py-2.5 cursor-pointer transition-colors"
                 style={{
                   borderBottom: `1px solid ${border}`,
                   background: i === activeIndex ? cardBg : "transparent",
                 }}
-                onMouseDown={() => { onSelect(row["PRODUCT NAME"]); setActiveIndex(-1); }}
+                onMouseDown={() => { onSelect(p["PRODUCT NAME"]); setActiveIndex(-1); }}
                 onMouseEnter={() => setActiveIndex(i)}
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-light">{row["PRODUCT NAME"]}</span>
-                </div>
-                {showBalance && <span className="text-[11px]" style={{ color: "hsl(var(--foreground))" }}>{row["CHIC NAILSPA BALANCE"]}</span>}
+                <span className="text-[13px] font-light">{p["PRODUCT NAME"]}</span>
+                {showBalance && <span className="text-[11px]" style={{ color: "hsl(var(--foreground))" }}>{p["CHIC NAILSPA BALANCE"]}</span>}
               </div>
             ))}
           </div>
@@ -324,7 +332,7 @@ export default function StockChicNailspa() {
 
   const [mode, setMode] = useState<"usage" | "order">("usage");
 
-  const [balances, setBalances] = useState<BalanceRow[]>([]);
+  const [products, setProducts] = useState<AllFileProduct[]>([]);
   const [log, setLog] = useState<LogRow[]>([]);
   const [entries, setEntries] = useState<EntryLine[]>(makeEntries());
   const [submitting, setSubmitting] = useState(false);
@@ -347,7 +355,7 @@ export default function StockChicNailspa() {
   const [saveFlash, setSaveFlash] = useState(false);
 
   const [stockSearch, setStockSearch] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState<BalanceRow | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<AllFileProduct | null>(null);
   const [showStockDropdown, setShowStockDropdown] = useState(false);
   const [stockActiveIndex, setStockActiveIndex] = useState(-1);
   const stockListRef = useRef<HTMLDivElement>(null);
@@ -363,19 +371,30 @@ export default function StockChicNailspa() {
     return d.toISOString().split("T")[0];
   };
 
-  const fetchBalances = useCallback(async () => {
+  const fetchProducts = useCallback(async () => {
     try {
-      const result = await (supabase as any).from("AllFileProducts").select("*");
-      if (result.error) console.error("Fetch balances error:", result.error);
-      if (result.data) {
-        const sorted = result.data.sort((a: BalanceRow, b: BalanceRow) =>
-          a["PRODUCT NAME"].localeCompare(b["PRODUCT NAME"])
-        );
-        setBalances(sorted);
+      let allData: AllFileProduct[] = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await (supabase as any)
+          .from("AllFileProducts")
+          .select("*")
+          .range(from, from + 999);
+        if (error) { console.error("Fetch products error:", error); break; }
+        if (!data || data.length === 0) break;
+        allData = allData.concat(data);
+        if (data.length < 1000) break;
+        from += 1000;
       }
-    } catch (err) {
-      console.error("Error fetching balances:", err);
-    }
+      // Deduplicate by PRODUCT NAME (all rows for same product have identical balances)
+      const seen = new Set<string>();
+      const unique = allData.filter(p => {
+        if (seen.has(p["PRODUCT NAME"])) return false;
+        seen.add(p["PRODUCT NAME"]);
+        return true;
+      });
+      setProducts(unique);
+    } catch (err) { console.error("Error fetching products:", err); }
   }, []);
 
   const fetchLog = useCallback(async () => {
@@ -386,32 +405,31 @@ export default function StockChicNailspa() {
         .from("AllFileLog")
         .select("*")
         .eq("BRANCH", "Chic Nailspa")
-        .gte("DATE", cutoff.toISOString().split("T")[0]);
+        .gte("DATE", cutoff.toISOString().split("T")[0])
+        .order("DATE", { ascending: false });
       if (error) console.error("Fetch log error:", error);
-      if (data) {
-        setLog(data.sort((a: LogRow, b: LogRow) => b.DATE.localeCompare(a.DATE) || b.id - a.id));
-      }
-    } catch (err) {
-      console.error("Error fetching log:", err);
-    }
+      if (data) setLog(data.sort((a: LogRow, b: LogRow) => b.DATE.localeCompare(a.DATE) || b.id - a.id));
+    } catch (err) { console.error("Error fetching log:", err); }
   }, []);
 
-  useEffect(() => { fetchBalances(); fetchLog(); }, [fetchBalances, fetchLog]);
+  useEffect(() => { fetchProducts(); fetchLog(); }, [fetchProducts, fetchLog]);
 
   const handleSave = async () => {
-    await fetchBalances();
+    await fetchProducts();
     await fetchLog();
     setSaveFlash(true);
     setTimeout(() => setSaveFlash(false), 2000);
   };
 
-  const sortedBalances = [...balances].sort((a, b) => a["PRODUCT NAME"].localeCompare(b["PRODUCT NAME"]));
+  const sortedProducts = [...products].sort((a, b) =>
+    a["PRODUCT NAME"].localeCompare(b["PRODUCT NAME"])
+  );
 
   const filteredStockProducts = stockSearch.length > 0
-    ? sortedBalances.filter(b => b["PRODUCT NAME"].toLowerCase().includes(stockSearch.toLowerCase()))
-    : sortedBalances;
+    ? sortedProducts.filter(p => p["PRODUCT NAME"].toLowerCase().includes(stockSearch.toLowerCase()))
+    : sortedProducts;
 
-  const handleSelectProduct = (row: BalanceRow) => {
+  const handleSelectProduct = (row: AllFileProduct) => {
     setSelectedProduct(row);
     setStockSearch(row["PRODUCT NAME"]);
     setShowStockDropdown(false);
@@ -475,30 +493,30 @@ export default function StockChicNailspa() {
     setSubmitting(true);
     try {
       for (const entry of valid) {
-        const balance = balances.find(b => b["PRODUCT NAME"] === entry.productName);
-        const currentBalance = Number(balance?.["CHIC NAILSPA BALANCE"] ?? 0);
+        const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
+        const currentBalance = Number(product?.["CHIC NAILSPA BALANCE"] ?? 0);
         const endingBalance = currentBalance - Number(entry.qty);
+
+        // Log to AllFileLog
         await (supabase as any).from("AllFileLog").insert({
           "DATE": getDateStr(usageDate),
           "PRODUCT NAME": entry.productName,
           "BRANCH": "Chic Nailspa",
           "SUPPLIER": null,
-          "TYPE": entry.type === "customer" ? "Customer" : entry.type,
-          "QTY": -Number(entry.qty),
+          "TYPE": entry.type,
           "STARTING BALANCE": currentBalance,
+          "QTY": -Number(entry.qty),
           "ENDING BALANCE": endingBalance,
+          "GRN": null,
           "OFFICE BALANCE": null,
         });
+
+        // Update ALL AllFileProducts rows for this product
         await (supabase as any).from("AllFileProducts")
           .update({ "CHIC NAILSPA BALANCE": endingBalance })
           .eq("PRODUCT NAME", entry.productName);
       }
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 60);
-      await (supabase as any).from("AllFileLog").delete()
-        .eq("BRANCH", "Chic Nailspa")
-        .lt("DATE", cutoff.toISOString().split("T")[0]);
-      await fetchBalances();
+      await fetchProducts();
       await fetchLog();
       setEntries(makeEntries());
       setSubmitSuccess(true);
@@ -537,11 +555,13 @@ export default function StockChicNailspa() {
   const reverseUsage = async (row: LogRow) => {
     setReversing(row.id);
     try {
+      // Restore branch balance (back to starting balance before this entry)
       await (supabase as any).from("AllFileProducts")
         .update({ "CHIC NAILSPA BALANCE": row["STARTING BALANCE"] })
         .eq("PRODUCT NAME", row["PRODUCT NAME"]);
+      // Delete from AllFileLog
       await (supabase as any).from("AllFileLog").delete().eq("id", row.id);
-      await fetchBalances();
+      await fetchProducts();
       await fetchLog();
     } catch (err) { console.error("Reverse usage error:", err); }
     setReversing(null);
@@ -550,32 +570,25 @@ export default function StockChicNailspa() {
   const reverseOrder = async (row: LogRow) => {
     setReversing(row.id);
     try {
-      // Restore Chic Nailspa balance
+      // Restore branch balance
       await (supabase as any).from("AllFileProducts")
         .update({ "CHIC NAILSPA BALANCE": row["STARTING BALANCE"] })
         .eq("PRODUCT NAME", row["PRODUCT NAME"]);
 
-      // Delete from AllFileLog
+      // Restore office balance: the log stores office balance AFTER deduction
+      // so to restore: add back the QTY
+      if (row["OFFICE BALANCE"] !== null && row["OFFICE BALANCE"] !== undefined) {
+        const restoredOfficeBal = Number(row["OFFICE BALANCE"]) + Number(row.QTY);
+        await (supabase as any).from("AllFileProducts")
+          .update({ "OFFICE BALANCE": restoredOfficeBal })
+          .eq("PRODUCT NAME", row["PRODUCT NAME"]);
+      }
+
+      // Delete from AllFileLog by id
       await (supabase as any).from("AllFileLog").delete().eq("id", row.id);
-
-      // Restore Office Balance in AllFileProducts
-      try {
-        const { data: officeData, error: officeSelectErr } = await (supabase as any)
-          .from("AllFileProducts")
-          .select("id, \"OFFICE BALANCE\"")
-          .eq("PRODUCT NAME", row["PRODUCT NAME"])
-          .maybeSingle();
-        if (!officeSelectErr && officeData) {
-          const restoredOfficeBalance = Number(officeData["OFFICE BALANCE"] ?? 0) + Number(row.QTY ?? 0);
-          await (supabase as any).from("AllFileProducts")
-            .update({ "OFFICE BALANCE": restoredOfficeBalance })
-            .eq("id", officeData.id);
-        }
-      } catch (officeErr) { console.error("Office balance restore error:", officeErr); }
-
-      await fetchBalances();
+      await fetchProducts();
       await fetchLog();
-    } catch (err) { console.error("Reverse error:", err); }
+    } catch (err) { console.error("Reverse order error:", err); }
     setReversing(null);
   };
 
@@ -590,7 +603,7 @@ export default function StockChicNailspa() {
       await (supabase as any).from("AllFileProducts")
         .update({ "CHIC NAILSPA BALANCE": newEndingBalance })
         .eq("PRODUCT NAME", row["PRODUCT NAME"]);
-      await fetchBalances();
+      await fetchProducts();
       await fetchLog();
     } catch (err) { console.error("Edit order qty error:", err); }
     setSavingOrderEdit(null);
@@ -600,30 +613,22 @@ export default function StockChicNailspa() {
   const handleOrderRowDelete = async (row: LogRow) => {
     setSavingOrderEdit(row.id);
     try {
-      // Restore Chic Nailspa balance
+      // Restore branch balance
       await (supabase as any).from("AllFileProducts")
         .update({ "CHIC NAILSPA BALANCE": row["STARTING BALANCE"] })
         .eq("PRODUCT NAME", row["PRODUCT NAME"]);
 
+      // Restore office balance
+      if (row["OFFICE BALANCE"] !== null && row["OFFICE BALANCE"] !== undefined) {
+        const restoredOfficeBal = Number(row["OFFICE BALANCE"]) + Number(row.QTY);
+        await (supabase as any).from("AllFileProducts")
+          .update({ "OFFICE BALANCE": restoredOfficeBal })
+          .eq("PRODUCT NAME", row["PRODUCT NAME"]);
+      }
+
       // Delete from AllFileLog
       await (supabase as any).from("AllFileLog").delete().eq("id", row.id);
-
-      // Restore Office Balance
-      try {
-        const { data: officeData, error: officeSelectErr } = await (supabase as any)
-          .from("AllFileProducts")
-          .select("id, \"OFFICE BALANCE\"")
-          .eq("PRODUCT NAME", row["PRODUCT NAME"])
-          .maybeSingle();
-        if (!officeSelectErr && officeData) {
-          const restoredOfficeBalance = Number(officeData["OFFICE BALANCE"] ?? 0) + Number(row.QTY ?? 0);
-          await (supabase as any).from("AllFileProducts")
-            .update({ "OFFICE BALANCE": restoredOfficeBalance })
-            .eq("id", officeData.id);
-        }
-      } catch (officeErr) { console.error("Office balance restore error:", officeErr); }
-
-      await fetchBalances();
+      await fetchProducts();
       await fetchLog();
     } catch (err) { console.error("Delete order row error:", err); }
     setSavingOrderEdit(null);
@@ -660,8 +665,8 @@ export default function StockChicNailspa() {
   const orderSummary = orderEntries
     .filter(e => e.productName)
     .map(e => {
-      const balance = balances.find(b => b["PRODUCT NAME"] === e.productName);
-      const current = Number(balance?.["CHIC NAILSPA BALANCE"] ?? 0);
+      const product = products.find(p => p["PRODUCT NAME"] === e.productName);
+      const current = Number(product?.["CHIC NAILSPA BALANCE"] ?? 0);
       const orderQty = Number(e.qty);
       return { productName: e.productName, current, orderQty, ending: current + orderQty };
     });
@@ -671,60 +676,46 @@ export default function StockChicNailspa() {
     if (!valid.length) return;
     setOrderSubmitting(true);
 
+    // Generate GRN: BOU DDMMYY based on selected date
     const orderDateObj = new Date(getDateStr(orderDate));
     const dd = String(orderDateObj.getDate()).padStart(2, "0");
     const mm = String(orderDateObj.getMonth() + 1).padStart(2, "0");
     const yy = String(orderDateObj.getFullYear()).slice(-2);
-    const grn = `CHI ${dd}${mm}${yy}`;
+    const grn = `CHC ${dd}${mm}${yy}`;
 
     try {
       for (const entry of valid) {
-        const balance = balances.find(b => b["PRODUCT NAME"] === entry.productName);
-        const currentBalance = Number(balance?.["CHIC NAILSPA BALANCE"] ?? 0);
-        const endingBalance = currentBalance + Number(entry.qty);
+        const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
+        const currentBranchBalance = Number(product?.["CHIC NAILSPA BALANCE"] ?? 0);
+        const endingBranchBalance = currentBranchBalance + Number(entry.qty);
+        const currentOfficeBalance = Number(product?.["OFFICE BALANCE"] ?? 0);
+        const endingOfficeBalance = currentOfficeBalance - Number(entry.qty);
 
-        // Get current office balance
-        const { data: officeData, error: officeSelectError } = await (supabase as any)
-          .from("AllFileProducts")
-          .select("id, \"OFFICE BALANCE\"")
-          .eq("PRODUCT NAME", entry.productName)
-          .maybeSingle();
-
-        let officeCurrentBalance = 0;
-        let officeEndingBalance = 0;
-
-        if (!officeSelectError && officeData) {
-          officeCurrentBalance = Number(officeData["OFFICE BALANCE"] ?? 0);
-          officeEndingBalance = officeCurrentBalance - Number(entry.qty);
-        }
-
-        // Insert single log entry to AllFileLog
+        // Log to AllFileLog
         await (supabase as any).from("AllFileLog").insert({
           "DATE": getDateStr(orderDate),
           "PRODUCT NAME": entry.productName,
           "BRANCH": "Chic Nailspa",
           "SUPPLIER": "Office",
           "TYPE": "Order",
+          "STARTING BALANCE": currentBranchBalance,
           "QTY": Number(entry.qty),
-          "STARTING BALANCE": currentBalance,
-          "ENDING BALANCE": endingBalance,
+          "ENDING BALANCE": endingBranchBalance,
           "GRN": grn,
-          "OFFICE BALANCE": officeEndingBalance,
+          "OFFICE BALANCE": endingOfficeBalance,
         });
 
-        // Update Chic Nailspa balance in AllFileProducts
+        // Update branch balance in AllFileProducts (ALL rows for this product)
         await (supabase as any).from("AllFileProducts")
-          .update({ "CHIC NAILSPA BALANCE": endingBalance })
+          .update({ "CHIC NAILSPA BALANCE": endingBranchBalance })
           .eq("PRODUCT NAME", entry.productName);
 
-        // Deduct from Office balance in AllFileProducts
-        if (!officeSelectError && officeData) {
-          await (supabase as any).from("AllFileProducts")
-            .update({ "OFFICE BALANCE": officeEndingBalance })
-            .eq("id", officeData.id);
-        }
+        // Update office balance in AllFileProducts (ALL rows for this product)
+        await (supabase as any).from("AllFileProducts")
+          .update({ "OFFICE BALANCE": endingOfficeBalance })
+          .eq("PRODUCT NAME", entry.productName);
       }
-      await fetchBalances();
+      await fetchProducts();
       await fetchLog();
       setOrderEntries(makeOrderEntries());
       setOrderSuccess(true);
@@ -750,7 +741,7 @@ export default function StockChicNailspa() {
     const allOrders = log.filter(r => r.TYPE === "Order");
     const seen = new Map<string, LogRow[]>();
     allOrders.forEach(r => {
-      const grn = (r as any).GRN || r.DATE;
+      const grn = r.GRN || r.DATE;
       const key = `${r.DATE}__${grn}`;
       if (!seen.has(key)) seen.set(key, []);
       seen.get(key)!.push(r);
@@ -777,20 +768,19 @@ export default function StockChicNailspa() {
     dateSortAsc ? a.DATE.localeCompare(b.DATE) : b.DATE.localeCompare(a.DATE)
   );
 
-
   const generateGRNPdf = () => {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const W = 595;
     const margin = 50;
 
     const grnNumber = (() => {
-      const found = allTodayOrders.find((r: any) => r["GRN"]);
-      if (found) return (found as any)["GRN"];
+      const found = allTodayOrders.find((r: LogRow) => r.GRN);
+      if (found) return found.GRN as string;
       const d = new Date();
       const dd = String(d.getDate()).padStart(2, "0");
       const mm = String(d.getMonth() + 1).padStart(2, "0");
       const yy = String(d.getFullYear()).slice(-2);
-      return `CHI ${dd}${mm}${yy}`;
+      return `CHC ${dd}${mm}${yy}`;
     })();
 
     const dateStr = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
@@ -1017,7 +1007,7 @@ export default function StockChicNailspa() {
                 </span>
               </div>
               <div className="flex items-center justify-between mt-1">
-                <p className="text-[11px] tracking-wider uppercase" style={dim}>{balances.length} products · Chic Nailspa</p>
+                <p className="text-[11px] tracking-wider uppercase" style={dim}>{products.length} products · Chic Nailspa</p>
                 {mode === "order" && (
                   <span
                     className="nav-link relative"
@@ -1068,9 +1058,7 @@ export default function StockChicNailspa() {
                       onMouseDown={() => handleSelectProduct(row)}
                       onMouseEnter={() => setStockActiveIndex(i)}
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-light">{row["PRODUCT NAME"]}</span>
-                      </div>
+                      <span className="text-[13px] font-light">{row["PRODUCT NAME"]}</span>
                       <span className="text-[12px]" style={{ color: "hsl(var(--foreground))" }}>{row["CHIC NAILSPA BALANCE"]}</span>
                     </div>
                   ))}
@@ -1092,13 +1080,11 @@ export default function StockChicNailspa() {
                       <p className="text-[11px] tracking-wider uppercase mb-1" style={dim}>Current Balance</p>
                       <p className="text-[15px] font-light">{selectedProduct["PRODUCT NAME"]}</p>
                     </div>
-                    <div className="flex items-center gap-5">
-                      <div className="text-right">
-                        <p className="text-[32px] font-light leading-none" style={{
-                          color: selectedProduct["CHIC NAILSPA BALANCE"] <= 0 ? "hsl(var(--red))" : "hsl(var(--foreground))"
-                        }}>{selectedProduct["CHIC NAILSPA BALANCE"]}</p>
-                        <p className="text-[10px] tracking-wider uppercase mt-1" style={dim}>units</p>
-                      </div>
+                    <div className="text-right">
+                      <p className="text-[32px] font-light leading-none" style={{
+                        color: selectedProduct["CHIC NAILSPA BALANCE"] <= 1 ? "hsl(var(--red))" : "hsl(var(--foreground))"
+                      }}>{selectedProduct["CHIC NAILSPA BALANCE"]}</p>
+                      <p className="text-[10px] tracking-wider uppercase mt-1" style={dim}>units</p>
                     </div>
                   </div>
 
@@ -1201,7 +1187,7 @@ export default function StockChicNailspa() {
                       <span className="text-[10px] w-4 text-right flex-shrink-0 pt-2.5" style={dim}>{idx + 1}</span>
                       <ProductDropdown
                         entry={entry}
-                        sortedBalances={sortedBalances}
+                        sortedProducts={sortedProducts}
                         onSelect={name => updateEntry(entry.id, { productName: name, showProductDropdown: false, productSearch: "" })}
                         onSearch={val => updateEntry(entry.id, { productSearch: val })}
                         onToggle={() => {
@@ -1275,14 +1261,14 @@ export default function StockChicNailspa() {
                 </div>
                 <div className="space-y-3 mb-5">
                   {orderEntries.map((entry, idx) => {
-                    const balance = balances.find(b => b["PRODUCT NAME"] === entry.productName);
-                    const currentBal = balance?.["CHIC NAILSPA BALANCE"] ?? null;
+                    const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
+                    const currentBal = product?.["CHIC NAILSPA BALANCE"] ?? null;
                     return (
                       <div key={entry.id} className="flex items-stretch gap-2">
                         <span className="text-[10px] w-4 text-right flex-shrink-0 pt-2.5" style={dim}>{idx + 1}</span>
                         <ProductDropdown
                           entry={entry}
-                          sortedBalances={sortedBalances}
+                          sortedProducts={sortedProducts}
                           onSelect={name => updateOrderEntry(entry.id, { productName: name, showProductDropdown: false, productSearch: "" })}
                           onSearch={val => updateOrderEntry(entry.id, { productSearch: val })}
                           onToggle={() => {
@@ -1866,41 +1852,22 @@ export default function StockChicNailspa() {
                           onMouseEnter={e => (e.currentTarget.style.background = "hsl(var(--card))")}
                           onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                         >
-                          <td className="text-[13px] font-light py-3" style={dim}>
-                            {new Date(group.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                          <td className="text-[12px] font-light py-3" style={dim}>
+                            {new Date(group.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                           </td>
-                          <td className="text-[13px] font-light py-3 text-center">{group.grn !== group.date ? group.grn : "—"}</td>
+                          <td className="text-[12px] font-light py-3 text-center" style={dim}>{group.grn}</td>
                           <td className="text-[12px] font-light py-3 text-center" style={dim}>{group.rows.length}</td>
                           <td className="py-3 text-center">
                             <span style={{ ...dim, fontSize: "11px", display: "inline-block", transition: "transform 0.15s", transform: expandedGRNs.has(group.key) ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                           </td>
                         </tr>
-                        {expandedGRNs.has(group.key) && (
-                          <tr key={`${group.key}-detail`} style={{ borderBottom: `1px solid hsl(var(--border))` }}>
-                            <td colSpan={4} className="pb-4 pt-1 px-0">
-                              <table className="w-full border-collapse">
-                                <thead>
-                                  <tr style={{ borderBottom: `1px solid hsl(var(--border))` }}>
-                                    <th className="label-uppercase font-normal text-left py-2 pl-4" style={dim}>Product</th>
-                                    <th className="label-uppercase font-normal text-center py-2" style={dim}>Prev Bal</th>
-                                    <th className="label-uppercase font-normal text-center py-2" style={dim}>Qty</th>
-                                    <th className="label-uppercase font-normal text-center py-2 pr-4" style={dim}>New Bal</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {group.rows.map(r => (
-                                    <tr key={r.id} style={{ borderBottom: `1px solid hsl(var(--border))` }}>
-                                      <td className="text-[12px] font-light py-2 pl-4">{r["PRODUCT NAME"]}</td>
-                                      <td className="text-[12px] font-light py-2 text-center" style={dim}>{r["STARTING BALANCE"]}</td>
-                                      <td className="text-[12px] font-light py-2 text-center" style={{ color: "hsl(var(--green))" }}>+{r.QTY}</td>
-                                      <td className="text-[12px] font-light py-2 text-center pr-4">{r["ENDING BALANCE"]}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </td>
+                        {expandedGRNs.has(group.key) && group.rows.map((row, ri) => (
+                          <tr key={row.id} className="border-b" style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}>
+                            <td className="text-[12px] font-light py-2.5 pl-2" style={dim}>—</td>
+                            <td className="text-[13px] font-light py-2.5" colSpan={2}>{row["PRODUCT NAME"]}</td>
+                            <td className="text-[12px] font-light py-2.5 text-center" style={{ color: "hsl(var(--green))" }}>+{row.QTY}</td>
                           </tr>
-                        )}
+                        ))}
                       </>
                     ))}
                   </tbody>

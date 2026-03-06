@@ -3,30 +3,39 @@ import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
 import ThemeToggle from "@/components/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Plus, X, ChevronLeft, ChevronRight, Search, Star, ChevronDown, FileText, Download, Home, Lock } from "lucide-react";
+import { ArrowLeft, Plus, X, ChevronLeft, ChevronRight, Search, ChevronDown, FileText, Download, Home, Lock } from "lucide-react";
 import jsPDF from "jspdf";
 
-interface BalanceRow {
-  "Product Name": string;
-  "Starting Balance": number;
-  "Favourite": string | null;
-}
-
-interface ShopPriceRow {
-  "Product Name": string;
-  "Staff Price": number | null;
-  "Customer Price": number | null;
+interface AllFileProduct {
+  id: number;
+  "PRODUCT NAME": string;
+  "SUPPLIER": string | null;
+  "SUPPLIER PRICE": number | null;
+  "BRANCH PRICE": number | null;
+  "STAFF PRICE": number | null;
+  "CUSTOMER PRICE": number | null;
+  "NUR YADI BALANCE": number;
+  "NUR YADI BALANCE": number;
+  "CHIC NAILSPA BALANCE": number;
+  "OFFICE BALANCE": number;
+  "PAR": number | null;
+  "UNITS/ORDER": number | null;
+  "COLOUR": boolean | null;
+  "OFFICE SECTION": string | null;
 }
 
 interface LogRow {
   id: number;
-  Date: string;
-  "Product Name": string;
-  Type: string;
-  Qty: number;
-  "Starting Balance": number;
-  "Ending Balance": number;
-  GRN?: string;
+  DATE: string;
+  "PRODUCT NAME": string;
+  BRANCH: string;
+  SUPPLIER: string | null;
+  TYPE: string;
+  "STARTING BALANCE": number;
+  QTY: number;
+  "ENDING BALANCE": number;
+  GRN?: string | null;
+  "OFFICE BALANCE"?: number | null;
 }
 
 interface EntryLine {
@@ -58,9 +67,9 @@ const makeOrderEntries = (): OrderLine[] => [1,2,3,4,5].map(id => ({
   id, productName: "", qty: 1, showProductDropdown: false, productSearch: "",
 }));
 
-function ProductDropdown({ entry, sortedBalances, onSelect, onSearch, onToggle, onClose, showBalance }: {
+function ProductDropdown({ entry, sortedProducts, onSelect, onSearch, onToggle, onClose, showBalance }: {
   entry: { productName: string; showProductDropdown: boolean; productSearch: string };
-  sortedBalances: BalanceRow[];
+  sortedProducts: AllFileProduct[];
   onSelect: (name: string) => void;
   onSearch: (val: string) => void;
   onToggle: () => void;
@@ -76,8 +85,8 @@ function ProductDropdown({ entry, sortedBalances, onSelect, onSearch, onToggle, 
   const dim: React.CSSProperties = { color: "hsl(var(--muted-foreground))" };
 
   const filtered = entry.productSearch
-    ? sortedBalances.filter(b => b["Product Name"].toLowerCase().includes(entry.productSearch.toLowerCase()))
-    : sortedBalances;
+    ? sortedProducts.filter(p => p["PRODUCT NAME"].toLowerCase().includes(entry.productSearch.toLowerCase()))
+    : sortedProducts;
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -109,7 +118,7 @@ function ProductDropdown({ entry, sortedBalances, onSelect, onSearch, onToggle, 
     } else if (e.key === "Enter") {
       e.preventDefault();
       const target = activeIndex >= 0 ? filtered[activeIndex] : filtered[0];
-      if (target) { onSelect(target["Product Name"]); setActiveIndex(-1); }
+      if (target) { onSelect(target["PRODUCT NAME"]); setActiveIndex(-1); }
     } else if (e.key === "Escape") {
       onClose();
       setActiveIndex(-1);
@@ -148,23 +157,20 @@ function ProductDropdown({ entry, sortedBalances, onSelect, onSearch, onToggle, 
             />
           </div>
           <div ref={listRef} className="max-h-[200px] overflow-y-auto scrollbar-thin">
-            {filtered.map((row, i) => (
+            {filtered.map((p, i) => (
               <div
-                key={row["Product Name"]}
+                key={p["PRODUCT NAME"]}
                 data-item
                 className="flex items-center justify-between px-3 py-2.5 cursor-pointer transition-colors"
                 style={{
                   borderBottom: `1px solid ${border}`,
                   background: i === activeIndex ? cardBg : "transparent",
                 }}
-                onMouseDown={() => { onSelect(row["Product Name"]); setActiveIndex(-1); }}
+                onMouseDown={() => { onSelect(p["PRODUCT NAME"]); setActiveIndex(-1); }}
                 onMouseEnter={() => setActiveIndex(i)}
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-light">{row["Product Name"]}</span>
-                  {row["Favourite"] === "Yes" && <Star size={9} fill="currentColor" style={dim} />}
-                </div>
-                {showBalance && <span className="text-[11px]" style={{ color: "hsl(var(--foreground))" }}>{row["Starting Balance"]}</span>}
+                <span className="text-[13px] font-light">{p["PRODUCT NAME"]}</span>
+                {showBalance && <span className="text-[11px]" style={{ color: "hsl(var(--foreground))" }}>{p["NUR YADI BALANCE"]}</span>}
               </div>
             ))}
           </div>
@@ -326,8 +332,7 @@ export default function StockNurYadi() {
 
   const [mode, setMode] = useState<"usage" | "order">("usage");
 
-  const [balances, setBalances] = useState<BalanceRow[]>([]);
-  const [shopPrices, setShopPrices] = useState<ShopPriceRow[]>([]);
+  const [products, setProducts] = useState<AllFileProduct[]>([]);
   const [log, setLog] = useState<LogRow[]>([]);
   const [entries, setEntries] = useState<EntryLine[]>(makeEntries());
   const [submitting, setSubmitting] = useState(false);
@@ -350,7 +355,7 @@ export default function StockNurYadi() {
   const [saveFlash, setSaveFlash] = useState(false);
 
   const [stockSearch, setStockSearch] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState<BalanceRow | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<AllFileProduct | null>(null);
   const [showStockDropdown, setShowStockDropdown] = useState(false);
   const [stockActiveIndex, setStockActiveIndex] = useState(-1);
   const stockListRef = useRef<HTMLDivElement>(null);
@@ -366,19 +371,30 @@ export default function StockNurYadi() {
     return d.toISOString().split("T")[0];
   };
 
-  const fetchBalances = useCallback(async () => {
+  const fetchProducts = useCallback(async () => {
     try {
-      const result = await (supabase as any).from("Nur Yadi Balance").select("*");
-      if (result.error) console.error("Fetch balances error:", result.error);
-      if (result.data) {
-        const sorted = result.data.sort((a: BalanceRow, b: BalanceRow) =>
-          a["Product Name"].localeCompare(b["Product Name"])
-        );
-        setBalances(sorted);
+      let allData: AllFileProduct[] = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await (supabase as any)
+          .from("AllFileProducts")
+          .select("*")
+          .range(from, from + 999);
+        if (error) { console.error("Fetch products error:", error); break; }
+        if (!data || data.length === 0) break;
+        allData = allData.concat(data);
+        if (data.length < 1000) break;
+        from += 1000;
       }
-    } catch (err) {
-      console.error("Error fetching balances:", err);
-    }
+      // Deduplicate by PRODUCT NAME (all rows for same product have identical balances)
+      const seen = new Set<string>();
+      const unique = allData.filter(p => {
+        if (seen.has(p["PRODUCT NAME"])) return false;
+        seen.add(p["PRODUCT NAME"]);
+        return true;
+      });
+      setProducts(unique);
+    } catch (err) { console.error("Error fetching products:", err); }
   }, []);
 
   const fetchLog = useCallback(async () => {
@@ -386,54 +402,36 @@ export default function StockNurYadi() {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - 60);
       const { data, error } = await (supabase as any)
-        .from("NurYadiLog")
+        .from("AllFileLog")
         .select("*")
-        .gte("Date", cutoff.toISOString().split("T")[0]);
+        .eq("BRANCH", "Nur Yadi")
+        .gte("DATE", cutoff.toISOString().split("T")[0])
+        .order("DATE", { ascending: false });
       if (error) console.error("Fetch log error:", error);
-      if (data) {
-        setLog(data.sort((a: LogRow, b: LogRow) => b.Date.localeCompare(a.Date) || b.id - a.id));
-      }
-    } catch (err) {
-      console.error("Error fetching log:", err);
-    }
+      if (data) setLog(data.sort((a: LogRow, b: LogRow) => b.DATE.localeCompare(a.DATE) || b.id - a.id));
+    } catch (err) { console.error("Error fetching log:", err); }
   }, []);
 
-  const fetchShopPrices = useCallback(async () => {
-    try {
-      const { data, error } = await (supabase as any).from("NurYadiShopPrice").select("*");
-      if (error) console.error("Fetch shop prices error:", error);
-      if (data) setShopPrices(data);
-    } catch (err) { console.error("Error fetching shop prices:", err); }
-  }, []);
-
-  useEffect(() => { fetchBalances(); fetchLog(); fetchShopPrices(); }, [fetchBalances, fetchLog, fetchShopPrices]);
+  useEffect(() => { fetchProducts(); fetchLog(); }, [fetchProducts, fetchLog]);
 
   const handleSave = async () => {
-    await fetchBalances();
+    await fetchProducts();
     await fetchLog();
     setSaveFlash(true);
     setTimeout(() => setSaveFlash(false), 2000);
   };
 
-  const toggleFavourite = async (productName: string, current: string | null) => {
-    const newVal = current === "Yes" ? null : "Yes";
-    await (supabase as any).from("Nur Yadi Balance").update({ "Favourite": newVal }).eq("Product Name", productName);
-    await fetchBalances();
-    setSelectedProduct(prev => prev ? { ...prev, "Favourite": newVal } : null);
-  };
-
-  const sortedBalances = [
-    ...balances.filter(b => b["Favourite"] === "Yes"),
-    ...balances.filter(b => b["Favourite"] !== "Yes"),
-  ];
+  const sortedProducts = [...products].sort((a, b) =>
+    a["PRODUCT NAME"].localeCompare(b["PRODUCT NAME"])
+  );
 
   const filteredStockProducts = stockSearch.length > 0
-    ? sortedBalances.filter(b => b["Product Name"].toLowerCase().includes(stockSearch.toLowerCase()))
-    : sortedBalances;
+    ? sortedProducts.filter(p => p["PRODUCT NAME"].toLowerCase().includes(stockSearch.toLowerCase()))
+    : sortedProducts;
 
-  const handleSelectProduct = (row: BalanceRow) => {
+  const handleSelectProduct = (row: AllFileProduct) => {
     setSelectedProduct(row);
-    setStockSearch(row["Product Name"]);
+    setStockSearch(row["PRODUCT NAME"]);
     setShowStockDropdown(false);
     setStockActiveIndex(-1);
   };
@@ -495,25 +493,30 @@ export default function StockNurYadi() {
     setSubmitting(true);
     try {
       for (const entry of valid) {
-        const balance = balances.find(b => b["Product Name"] === entry.productName);
-        const currentBalance = Number(balance?.["Starting Balance"] ?? 0);
+        const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
+        const currentBalance = Number(product?.["NUR YADI BALANCE"] ?? 0);
         const endingBalance = currentBalance - Number(entry.qty);
-        await (supabase as any).from("NurYadiLog").insert({
-          "Date": getDateStr(usageDate),
-          "Product Name": entry.productName,
-          "Type": entry.type === "customer" ? "Customer" : "Salon Use",
-          "Qty": -Number(entry.qty),
-          "Starting Balance": currentBalance,
-          "Ending Balance": endingBalance,
+
+        // Log to AllFileLog
+        await (supabase as any).from("AllFileLog").insert({
+          "DATE": getDateStr(usageDate),
+          "PRODUCT NAME": entry.productName,
+          "BRANCH": "Nur Yadi",
+          "SUPPLIER": null,
+          "TYPE": entry.type,
+          "STARTING BALANCE": currentBalance,
+          "QTY": -Number(entry.qty),
+          "ENDING BALANCE": endingBalance,
+          "GRN": null,
+          "OFFICE BALANCE": null,
         });
-        await (supabase as any).from("Nur Yadi Balance")
-          .update({ "Starting Balance": endingBalance })
-          .eq("Product Name", entry.productName);
+
+        // Update ALL AllFileProducts rows for this product
+        await (supabase as any).from("AllFileProducts")
+          .update({ "NUR YADI BALANCE": endingBalance })
+          .eq("PRODUCT NAME", entry.productName);
       }
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 60);
-      await (supabase as any).from("NurYadiLog").delete().lt("Date", cutoff.toISOString().split("T")[0]);
-      await fetchBalances();
+      await fetchProducts();
       await fetchLog();
       setEntries(makeEntries());
       setSubmitSuccess(true);
@@ -552,11 +555,13 @@ export default function StockNurYadi() {
   const reverseUsage = async (row: LogRow) => {
     setReversing(row.id);
     try {
-      await (supabase as any).from("Nur Yadi Balance")
-        .update({ "Starting Balance": row["Starting Balance"] })
-        .eq("Product Name", row["Product Name"]);
-      await (supabase as any).from("NurYadiLog").delete().eq("id", row.id);
-      await fetchBalances();
+      // Restore branch balance (back to starting balance before this entry)
+      await (supabase as any).from("AllFileProducts")
+        .update({ "NUR YADI BALANCE": row["STARTING BALANCE"] })
+        .eq("PRODUCT NAME", row["PRODUCT NAME"]);
+      // Delete from AllFileLog
+      await (supabase as any).from("AllFileLog").delete().eq("id", row.id);
+      await fetchProducts();
       await fetchLog();
     } catch (err) { console.error("Reverse usage error:", err); }
     setReversing(null);
@@ -565,44 +570,25 @@ export default function StockNurYadi() {
   const reverseOrder = async (row: LogRow) => {
     setReversing(row.id);
     try {
-      // Restore Nur Yadi Balance
-      await (supabase as any).from("Nur Yadi Balance")
-        .update({ "Starting Balance": row["Starting Balance"] })
-        .eq("Product Name", row["Product Name"]);
-      // Delete from NurYadiLog
-      await (supabase as any).from("NurYadiLog").delete().eq("id", row.id);
-      // Restore Office Balance
-      try {
-        const { data: officeData, error: officeSelectErr } = await (supabase as any)
-          .from("OfficeBalance")
-          .select("id, \"OFFICE BALANCE\"")
-          .eq("PRODUCT NAME", row["Product Name"])
-          .maybeSingle();
-        if (officeSelectErr) {
-          console.error("OfficeBalance select error (reverseOrder):", officeSelectErr);
-        } else if (officeData) {
-          const restoredBalance = Number(officeData["OFFICE BALANCE"] ?? 0) + Number(row["Qty"] ?? 0);
-          const { error: officeUpdateErr } = await (supabase as any).from("OfficeBalance")
-            .update({ "OFFICE BALANCE": restoredBalance })
-            .eq("id", officeData.id);
-          if (officeUpdateErr) console.error("OfficeBalance update error (reverseOrder):", officeUpdateErr);
-        } else {
-          console.warn("OfficeBalance row not found for product:", row["Product Name"]);
-        }
-      } catch (officeErr) { console.error("Office balance restore error:", officeErr); }
-      // Remove matching OfficeLog entry
-      try {
-        let officeLogQuery = (supabase as any).from("OfficeLog")
-          .delete()
-          .eq("Product Name", row["Product Name"])
-          .eq("Date", row["Date"]);
-        if (row.GRN) officeLogQuery = officeLogQuery.eq("GRN", row.GRN);
-        const { error: logDelErr } = await officeLogQuery;
-        if (logDelErr) console.error("OfficeLog delete error (reverseOrder):", logDelErr);
-      } catch (logErr) { console.error("OfficeLog delete error:", logErr); }
-      await fetchBalances();
+      // Restore branch balance
+      await (supabase as any).from("AllFileProducts")
+        .update({ "NUR YADI BALANCE": row["STARTING BALANCE"] })
+        .eq("PRODUCT NAME", row["PRODUCT NAME"]);
+
+      // Restore office balance: the log stores office balance AFTER deduction
+      // so to restore: add back the QTY
+      if (row["OFFICE BALANCE"] !== null && row["OFFICE BALANCE"] !== undefined) {
+        const restoredOfficeBal = Number(row["OFFICE BALANCE"]) + Number(row.QTY);
+        await (supabase as any).from("AllFileProducts")
+          .update({ "OFFICE BALANCE": restoredOfficeBal })
+          .eq("PRODUCT NAME", row["PRODUCT NAME"]);
+      }
+
+      // Delete from AllFileLog by id
+      await (supabase as any).from("AllFileLog").delete().eq("id", row.id);
+      await fetchProducts();
       await fetchLog();
-    } catch (err) { console.error("Reverse error:", err); }
+    } catch (err) { console.error("Reverse order error:", err); }
     setReversing(null);
   };
 
@@ -610,14 +596,14 @@ export default function StockNurYadi() {
     if (isNaN(newQty) || newQty < 1) return;
     setSavingOrderEdit(row.id);
     try {
-      const newEndingBalance = row["Starting Balance"] + newQty;
-      await (supabase as any).from("NurYadiLog")
-        .update({ "Qty": newQty, "Ending Balance": newEndingBalance })
+      const newEndingBalance = row["STARTING BALANCE"] + newQty;
+      await (supabase as any).from("AllFileLog")
+        .update({ "QTY": newQty, "ENDING BALANCE": newEndingBalance })
         .eq("id", row.id);
-      await (supabase as any).from("Nur Yadi Balance")
-        .update({ "Starting Balance": newEndingBalance })
-        .eq("Product Name", row["Product Name"]);
-      await fetchBalances();
+      await (supabase as any).from("AllFileProducts")
+        .update({ "NUR YADI BALANCE": newEndingBalance })
+        .eq("PRODUCT NAME", row["PRODUCT NAME"]);
+      await fetchProducts();
       await fetchLog();
     } catch (err) { console.error("Edit order qty error:", err); }
     setSavingOrderEdit(null);
@@ -627,42 +613,22 @@ export default function StockNurYadi() {
   const handleOrderRowDelete = async (row: LogRow) => {
     setSavingOrderEdit(row.id);
     try {
-      // Restore Nur Yadi Balance
-      await (supabase as any).from("Nur Yadi Balance")
-        .update({ "Starting Balance": row["Starting Balance"] })
-        .eq("Product Name", row["Product Name"]);
-      // Delete from NurYadiLog
-      await (supabase as any).from("NurYadiLog").delete().eq("id", row.id);
-      // Restore Office Balance
-      try {
-        const { data: officeData, error: officeSelectErr } = await (supabase as any)
-          .from("OfficeBalance")
-          .select("id, \"OFFICE BALANCE\"")
-          .eq("PRODUCT NAME", row["Product Name"])
-          .maybeSingle();
-        if (officeSelectErr) {
-          console.error("OfficeBalance select error (handleOrderRowDelete):", officeSelectErr);
-        } else if (officeData) {
-          const restoredBalance = Number(officeData["OFFICE BALANCE"] ?? 0) + Number(row["Qty"] ?? 0);
-          const { error: officeUpdateErr } = await (supabase as any).from("OfficeBalance")
-            .update({ "OFFICE BALANCE": restoredBalance })
-            .eq("id", officeData.id);
-          if (officeUpdateErr) console.error("OfficeBalance update error (handleOrderRowDelete):", officeUpdateErr);
-        } else {
-          console.warn("OfficeBalance row not found for product:", row["Product Name"]);
-        }
-      } catch (officeErr) { console.error("Office balance restore error:", officeErr); }
-      // Remove matching OfficeLog entry
-      try {
-        let officeLogQuery2 = (supabase as any).from("OfficeLog")
-          .delete()
-          .eq("Product Name", row["Product Name"])
-          .eq("Date", row["Date"]);
-        if (row.GRN) officeLogQuery2 = officeLogQuery2.eq("GRN", row.GRN);
-        const { error: logDelErr } = await officeLogQuery2;
-        if (logDelErr) console.error("OfficeLog delete error (handleOrderRowDelete):", logDelErr);
-      } catch (logErr) { console.error("OfficeLog delete error:", logErr); }
-      await fetchBalances();
+      // Restore branch balance
+      await (supabase as any).from("AllFileProducts")
+        .update({ "NUR YADI BALANCE": row["STARTING BALANCE"] })
+        .eq("PRODUCT NAME", row["PRODUCT NAME"]);
+
+      // Restore office balance
+      if (row["OFFICE BALANCE"] !== null && row["OFFICE BALANCE"] !== undefined) {
+        const restoredOfficeBal = Number(row["OFFICE BALANCE"]) + Number(row.QTY);
+        await (supabase as any).from("AllFileProducts")
+          .update({ "OFFICE BALANCE": restoredOfficeBal })
+          .eq("PRODUCT NAME", row["PRODUCT NAME"]);
+      }
+
+      // Delete from AllFileLog
+      await (supabase as any).from("AllFileLog").delete().eq("id", row.id);
+      await fetchProducts();
       await fetchLog();
     } catch (err) { console.error("Delete order row error:", err); }
     setSavingOrderEdit(null);
@@ -699,8 +665,8 @@ export default function StockNurYadi() {
   const orderSummary = orderEntries
     .filter(e => e.productName)
     .map(e => {
-      const balance = balances.find(b => b["Product Name"] === e.productName);
-      const current = Number(balance?.["Starting Balance"] ?? 0);
+      const product = products.find(p => p["PRODUCT NAME"] === e.productName);
+      const current = Number(product?.["NUR YADI BALANCE"] ?? 0);
       const orderQty = Number(e.qty);
       return { productName: e.productName, current, orderQty, ending: current + orderQty };
     });
@@ -715,67 +681,41 @@ export default function StockNurYadi() {
     const dd = String(orderDateObj.getDate()).padStart(2, "0");
     const mm = String(orderDateObj.getMonth() + 1).padStart(2, "0");
     const yy = String(orderDateObj.getFullYear()).slice(-2);
-    const grn = `NUR ${dd}${mm}${yy}`;
+    const grn = `NYD ${dd}${mm}${yy}`;
 
     try {
       for (const entry of valid) {
-        const balance = balances.find(b => b["Product Name"] === entry.productName);
-        const currentBalance = Number(balance?.["Starting Balance"] ?? 0);
-        const endingBalance = currentBalance + Number(entry.qty);
-        await (supabase as any).from("NurYadiLog").insert({
-          "Date": getDateStr(orderDate),
-          "Product Name": entry.productName,
-          "Type": "Order",
-          "Qty": Number(entry.qty),
-          "Starting Balance": currentBalance,
-          "Ending Balance": endingBalance,
-          "GRN": grn,
-        });
-        await (supabase as any).from("Nur Yadi Balance")
-          .update({ "Starting Balance": endingBalance })
-          .eq("Product Name", entry.productName);
+        const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
+        const currentBranchBalance = Number(product?.["NUR YADI BALANCE"] ?? 0);
+        const endingBranchBalance = currentBranchBalance + Number(entry.qty);
+        const currentOfficeBalance = Number(product?.["OFFICE BALANCE"] ?? 0);
+        const endingOfficeBalance = currentOfficeBalance - Number(entry.qty);
 
-        // Deduct from OfficeBalance and log to OfficeLog
-        try {
-          const { data: officeData, error: officeSelectError } = await (supabase as any)
-            .from("OfficeBalance")
-            .select("id, \"OFFICE BALANCE\"")
-            .eq("PRODUCT NAME", entry.productName)
-            .maybeSingle();
-          if (officeSelectError) {
-            console.error("OfficeBalance select error:", officeSelectError);
-          } else if (officeData) {
-            const officeCurrentBalance = Number(officeData["OFFICE BALANCE"] ?? 0);
-            const officeEndingBalance = officeCurrentBalance - Number(entry.qty);
-            const { error: officeUpdateError } = await (supabase as any)
-              .from("OfficeBalance")
-              .update({ "OFFICE BALANCE": officeEndingBalance })
-              .eq("id", officeData.id);
-            if (officeUpdateError) {
-              console.error("OfficeBalance update error:", officeUpdateError);
-            } else {
-              // Log to OfficeLog separately — don't let this failure affect the balance update
-              try {
-                await (supabase as any).from("OfficeLog").insert({
-                  "Date": getDateStr(orderDate),
-                  "Product Name": entry.productName,
-                  "Type": "Branch Order",
-                  "Branch": "Nur Yadi",
-                  "Qty": Number(entry.qty),
-                  "Starting Balance": officeCurrentBalance,
-                  "Ending Balance": officeEndingBalance,
-                  "GRN": grn,
-                });
-              } catch (logErr) {
-                console.error("OfficeLog insert error (non-critical):", logErr);
-              }
-            }
-          }
-        } catch (officeErr) {
-          console.error("OfficeBalance sync error:", officeErr);
-        }
+        // Log to AllFileLog
+        await (supabase as any).from("AllFileLog").insert({
+          "DATE": getDateStr(orderDate),
+          "PRODUCT NAME": entry.productName,
+          "BRANCH": "Nur Yadi",
+          "SUPPLIER": "Office",
+          "TYPE": "Order",
+          "STARTING BALANCE": currentBranchBalance,
+          "QTY": Number(entry.qty),
+          "ENDING BALANCE": endingBranchBalance,
+          "GRN": grn,
+          "OFFICE BALANCE": endingOfficeBalance,
+        });
+
+        // Update branch balance in AllFileProducts (ALL rows for this product)
+        await (supabase as any).from("AllFileProducts")
+          .update({ "NUR YADI BALANCE": endingBranchBalance })
+          .eq("PRODUCT NAME", entry.productName);
+
+        // Update office balance in AllFileProducts (ALL rows for this product)
+        await (supabase as any).from("AllFileProducts")
+          .update({ "OFFICE BALANCE": endingOfficeBalance })
+          .eq("PRODUCT NAME", entry.productName);
       }
-      await fetchBalances();
+      await fetchProducts();
       await fetchLog();
       setOrderEntries(makeOrderEntries());
       setOrderSuccess(true);
@@ -790,19 +730,19 @@ export default function StockNurYadi() {
   const cardBg = "hsl(var(--card))";
 
   const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split("T")[0]; })();
-  const allOrderDates = [...new Set(log.filter(r => r.Type === "Order").map(r => r.Date))].sort((a, b) => b.localeCompare(a));
+  const allOrderDates = [...new Set(log.filter(r => r.TYPE === "Order").map(r => r.DATE))].sort((a, b) => b.localeCompare(a));
   const latestOrderDate = allOrderDates[0] ?? today;
-  const todayOrders = log.filter(r => r.Type === "Order" && r.Date === latestOrderDate);
-  const allTodayOrders = log.filter(r => r.Type === "Order" && r.Date === latestOrderDate);
-  const hasOrderNotification = log.filter(r => r.Type === "Order" && (r.Date === today || r.Date === tomorrow)).length > 0;
+  const todayOrders = log.filter(r => r.TYPE === "Order" && r.DATE === latestOrderDate);
+  const allTodayOrders = log.filter(r => r.TYPE === "Order" && r.DATE === latestOrderDate);
+  const hasOrderNotification = log.filter(r => r.TYPE === "Order" && (r.DATE === today || r.DATE === tomorrow)).length > 0;
 
   // Group ALL orders by date+GRN for the All Orders section
   const allOrderGroups = (() => {
-    const allOrders = log.filter(r => r.Type === "Order");
+    const allOrders = log.filter(r => r.TYPE === "Order");
     const seen = new Map<string, LogRow[]>();
     allOrders.forEach(r => {
-      const grn = (r as any).GRN || r.Date;
-      const key = `${r.Date}__${grn}`;
+      const grn = r.GRN || r.DATE;
+      const key = `${r.DATE}__${grn}`;
       if (!seen.has(key)) seen.set(key, []);
       seen.get(key)!.push(r);
     });
@@ -816,18 +756,17 @@ export default function StockNurYadi() {
 
   const activityLogUnsorted = activityRange === "all"
     ? log
-    : log.filter(r => r.Date >= cutoff14Str);
+    : log.filter(r => r.DATE >= cutoff14Str);
   const activityLog = [...activityLogUnsorted].sort((a, b) =>
-    dateSortAsc ? a.Date.localeCompare(b.Date) : b.Date.localeCompare(a.Date)
+    dateSortAsc ? a.DATE.localeCompare(b.DATE) : b.DATE.localeCompare(a.DATE)
   );
 
   const recentOrdersLogUnsorted = log.filter(r =>
-    r.Type === "Order" && (activityRange === "all" || r.Date >= cutoff14Str)
+    r.TYPE === "Order" && (activityRange === "all" || r.DATE >= cutoff14Str)
   );
   const recentOrdersLog = [...recentOrdersLogUnsorted].sort((a, b) =>
-    dateSortAsc ? a.Date.localeCompare(b.Date) : b.Date.localeCompare(a.Date)
+    dateSortAsc ? a.DATE.localeCompare(b.DATE) : b.DATE.localeCompare(a.DATE)
   );
-
 
   const generateGRNPdf = () => {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -835,13 +774,13 @@ export default function StockNurYadi() {
     const margin = 50;
 
     const grnNumber = (() => {
-      const found = allTodayOrders.find((r: any) => r["GRN"]);
-      if (found) return (found as any)["GRN"];
+      const found = allTodayOrders.find((r: LogRow) => r.GRN);
+      if (found) return found.GRN as string;
       const d = new Date();
       const dd = String(d.getDate()).padStart(2, "0");
       const mm = String(d.getMonth() + 1).padStart(2, "0");
       const yy = String(d.getFullYear()).slice(-2);
-      return `NUR ${dd}${mm}${yy}`;
+      return `NYD ${dd}${mm}${yy}`;
     })();
 
     const dateStr = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
@@ -922,7 +861,7 @@ export default function StockNurYadi() {
 
     // Rows — sorted alphabetically
     const sortedOrders = [...allTodayOrders].sort((a, b) =>
-      a["Product Name"].localeCompare(b["Product Name"])
+      a["PRODUCT NAME"].localeCompare(b["PRODUCT NAME"])
     );
 
     const rowH = 26;
@@ -930,7 +869,7 @@ export default function StockNurYadi() {
     let totalQty = 0;
 
     sortedOrders.forEach((row, idx) => {
-      totalQty += row.Qty;
+      totalQty += row.QTY;
       if (idx % 2 === 0) {
         doc.setFillColor(250, 250, 250);
         doc.rect(margin, y - 2, W - 2 * margin, rowH, "F");
@@ -949,10 +888,10 @@ export default function StockNurYadi() {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9.5);
       doc.setTextColor(38, 38, 38);
-      doc.text(row["Product Name"], nameX, y + 14);
-      doc.text(String(row["Starting Balance"]), oldCX, y + 14, { align: "center" });
-      doc.text(String(row.Qty), qtyCX, y + 14, { align: "center" });
-      doc.text(String(row["Ending Balance"]), endCX, y + 14, { align: "center" });
+      doc.text(row["PRODUCT NAME"], nameX, y + 14);
+      doc.text(String(row["STARTING BALANCE"]), oldCX, y + 14, { align: "center" });
+      doc.text(String(row.QTY), qtyCX, y + 14, { align: "center" });
+      doc.text(String(row["ENDING BALANCE"]), endCX, y + 14, { align: "center" });
       y += rowH;
     });
 
@@ -990,10 +929,11 @@ export default function StockNurYadi() {
 
     doc.save(`${grnNumber} - GRN.pdf`);
   };
+
   const exportToExcel = () => {
     const rows = [
       ["Product Name", "Starting Balance", "Order Qty", "Ending Balance"],
-      ...allTodayOrders.map(r => [r["Product Name"], r["Starting Balance"], r.Qty, r["Ending Balance"]])
+      ...allTodayOrders.map(r => [r["PRODUCT NAME"], r["STARTING BALANCE"], r.QTY, r["ENDING BALANCE"]])
     ];
     const csv = rows.map(r => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -1015,7 +955,7 @@ export default function StockNurYadi() {
             className="flex items-center gap-2 text-[13px] tracking-[0.15em] uppercase text-foreground transition-colors"
           >
             <ArrowLeft size={15} />
-            <span>PRICE LIST</span>
+            <span>OFFICE</span>
           </button>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -1067,7 +1007,7 @@ export default function StockNurYadi() {
                 </span>
               </div>
               <div className="flex items-center justify-between mt-1">
-                <p className="text-[11px] tracking-wider uppercase" style={dim}>{balances.length} products · Nur Yadi</p>
+                <p className="text-[11px] tracking-wider uppercase" style={dim}>{products.length} products · Nur Yadi</p>
                 {mode === "order" && (
                   <span
                     className="nav-link relative"
@@ -1108,7 +1048,7 @@ export default function StockNurYadi() {
                   style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px" }}
                 >
                   {filteredStockProducts.map((row, i) => (
-                    <div key={row["Product Name"]}
+                    <div key={row["PRODUCT NAME"]}
                       data-item
                       className="flex items-center justify-between px-4 py-2.5 cursor-pointer transition-colors"
                       style={{
@@ -1118,11 +1058,8 @@ export default function StockNurYadi() {
                       onMouseDown={() => handleSelectProduct(row)}
                       onMouseEnter={() => setStockActiveIndex(i)}
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-light">{row["Product Name"]}</span>
-                        {row["Favourite"] === "Yes" && <Star size={9} fill="currentColor" style={dim} />}
-                      </div>
-                      <span className="text-[12px]" style={{ color: "hsl(var(--foreground))" }}>{row["Starting Balance"]}</span>
+                      <span className="text-[13px] font-light">{row["PRODUCT NAME"]}</span>
+                      <span className="text-[12px]" style={{ color: "hsl(var(--foreground))" }}>{row["NUR YADI BALANCE"]}</span>
                     </div>
                   ))}
                 </div>
@@ -1130,35 +1067,24 @@ export default function StockNurYadi() {
             </div>
 
             {selectedProduct && (() => {
-              const productLog = log.filter(r => r["Product Name"] === selectedProduct["Product Name"]);
-              const shopPrice = shopPrices.find(p => p["Product Name"] === selectedProduct["Product Name"]);
+              const productLog = log.filter(r => r["PRODUCT NAME"] === selectedProduct["PRODUCT NAME"]);
               const fmtPrice = (val: number | null | undefined) => {
                 if (!val || val < 0.01) return "—";
                 return `RM ${val.toFixed(2)}`;
               };
               return (
                 <div className="surface-box p-6">
-                  {/* Balance + favourite row */}
+                  {/* Balance row */}
                   <div className="flex items-center justify-between mb-6">
                     <div>
                       <p className="text-[11px] tracking-wider uppercase mb-1" style={dim}>Current Balance</p>
-                      <p className="text-[15px] font-light">{selectedProduct["Product Name"]}</p>
+                      <p className="text-[15px] font-light">{selectedProduct["PRODUCT NAME"]}</p>
                     </div>
-                    <div className="flex items-center gap-5">
-                      <button
-                        onClick={() => toggleFavourite(selectedProduct["Product Name"], selectedProduct["Favourite"])}
-                        className="transition-colors"
-                        style={{ color: selectedProduct["Favourite"] === "Yes" ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))" }}
-                        onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
-                        onMouseLeave={e => (e.currentTarget.style.color = selectedProduct["Favourite"] === "Yes" ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))")}>
-                        <Star size={16} fill={selectedProduct["Favourite"] === "Yes" ? "currentColor" : "none"} />
-                      </button>
-                      <div className="text-right">
-                        <p className="text-[32px] font-light leading-none" style={{
-                          color: selectedProduct["Starting Balance"] <= 1 ? "hsl(var(--red))" : "hsl(var(--foreground))"
-                        }}>{selectedProduct["Starting Balance"]}</p>
-                        <p className="text-[10px] tracking-wider uppercase mt-1" style={dim}>units</p>
-                      </div>
+                    <div className="text-right">
+                      <p className="text-[32px] font-light leading-none" style={{
+                        color: selectedProduct["NUR YADI BALANCE"] <= 1 ? "hsl(var(--red))" : "hsl(var(--foreground))"
+                      }}>{selectedProduct["NUR YADI BALANCE"]}</p>
+                      <p className="text-[10px] tracking-wider uppercase mt-1" style={dim}>units</p>
                     </div>
                   </div>
 
@@ -1166,11 +1092,11 @@ export default function StockNurYadi() {
                   <div className="flex items-center gap-6 mb-6 pt-4 border-t" style={{ borderColor: border }}>
                     <div>
                       <p className="text-[10px] tracking-wider uppercase mb-1" style={dim}>Staff Price</p>
-                      <p className="text-[15px] font-light">{fmtPrice(shopPrice?.["Staff Price"])}</p>
+                      <p className="text-[15px] font-light">{fmtPrice(selectedProduct["STAFF PRICE"])}</p>
                     </div>
                     <div>
                       <p className="text-[10px] tracking-wider uppercase mb-1" style={dim}>Customer Price</p>
-                      <p className="text-[15px] font-light">{fmtPrice(shopPrice?.["Customer Price"])}</p>
+                      <p className="text-[15px] font-light">{fmtPrice(selectedProduct["CUSTOMER PRICE"])}</p>
                     </div>
                   </div>
 
@@ -1190,14 +1116,14 @@ export default function StockNurYadi() {
                         {productLog.map(row => (
                           <tr key={row.id} className="border-b" style={{ borderColor: border }}>
                             <td className="text-[12px] font-light py-2" style={dim}>
-                              {new Date(row.Date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                              {new Date(row.DATE).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                             </td>
-                            <td className="text-[11px] font-light py-2 text-center tracking-wider uppercase" style={dim}>{row.Type}</td>
-                            <td className="text-[12px] font-light py-2 text-center" style={dim}>{row["Starting Balance"]}</td>
-                            <td className="text-[12px] font-light py-2 text-center" style={{ color: row.Type === "Order" ? "hsl(var(--green))" : "hsl(var(--red))" }}>
-                              {row.Qty}
+                            <td className="text-[11px] font-light py-2 text-center tracking-wider uppercase" style={dim}>{row.TYPE}</td>
+                            <td className="text-[12px] font-light py-2 text-center" style={dim}>{row["STARTING BALANCE"]}</td>
+                            <td className="text-[12px] font-light py-2 text-center" style={{ color: row.TYPE === "Order" ? "hsl(var(--green))" : "hsl(var(--red))" }}>
+                              {row.QTY}
                             </td>
-                            <td className="text-[12px] font-light py-2 text-center">{row["Ending Balance"]}</td>
+                            <td className="text-[12px] font-light py-2 text-center">{row["ENDING BALANCE"]}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1261,7 +1187,7 @@ export default function StockNurYadi() {
                       <span className="text-[10px] w-4 text-right flex-shrink-0 pt-2.5" style={dim}>{idx + 1}</span>
                       <ProductDropdown
                         entry={entry}
-                        sortedBalances={sortedBalances}
+                        sortedProducts={sortedProducts}
                         onSelect={name => updateEntry(entry.id, { productName: name, showProductDropdown: false, productSearch: "" })}
                         onSearch={val => updateEntry(entry.id, { productSearch: val })}
                         onToggle={() => {
@@ -1335,14 +1261,14 @@ export default function StockNurYadi() {
                 </div>
                 <div className="space-y-3 mb-5">
                   {orderEntries.map((entry, idx) => {
-                    const balance = balances.find(b => b["Product Name"] === entry.productName);
-                    const currentBal = balance?.["Starting Balance"] ?? null;
+                    const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
+                    const currentBal = product?.["NUR YADI BALANCE"] ?? null;
                     return (
                       <div key={entry.id} className="flex items-stretch gap-2">
                         <span className="text-[10px] w-4 text-right flex-shrink-0 pt-2.5" style={dim}>{idx + 1}</span>
                         <ProductDropdown
                           entry={entry}
-                          sortedBalances={sortedBalances}
+                          sortedProducts={sortedProducts}
                           onSelect={name => updateOrderEntry(entry.id, { productName: name, showProductDropdown: false, productSearch: "" })}
                           onSearch={val => updateOrderEntry(entry.id, { productSearch: val })}
                           onToggle={() => {
@@ -1452,10 +1378,10 @@ export default function StockNurYadi() {
                       <tbody>
                         {todayOrders.map(row => (
                           <tr key={row.id} className="border-b table-row-hover" style={{ borderColor: border }}>
-                            <td className="text-[13px] font-light py-3">{row["Product Name"]}</td>
-                            <td className="text-[13px] font-light py-3 text-center" style={dim}>{row["Starting Balance"]}</td>
-                            <td className="text-[13px] font-light py-3 text-center" style={{ color: "hsl(var(--green))" }}>{row.Qty > 0 ? "+" : ""}{row.Qty}</td>
-                            <td className="text-[13px] font-light py-3 text-center">{row["Ending Balance"]}</td>
+                            <td className="text-[13px] font-light py-3">{row["PRODUCT NAME"]}</td>
+                            <td className="text-[13px] font-light py-3 text-center" style={dim}>{row["STARTING BALANCE"]}</td>
+                            <td className="text-[13px] font-light py-3 text-center" style={{ color: "hsl(var(--green))" }}>{row.QTY > 0 ? "+" : ""}{row.QTY}</td>
+                            <td className="text-[13px] font-light py-3 text-center">{row["ENDING BALANCE"]}</td>
                             <td className="py-3 text-center">
                               <button
                                 onClick={() => reverseOrder(row)}
@@ -1517,16 +1443,18 @@ export default function StockNurYadi() {
                   {recentOrdersLog.length === 0 ? (
                     <p className="text-[13px]" style={dim}>No orders yet</p>
                   ) : (() => {
-                    const recentRows = recentOrdersLog.filter(r => r.Date >= cutoff7Str);
-                    const olderRows = recentOrdersLog.filter(r => r.Date < cutoff7Str);
+                    const recentRows = recentOrdersLog.filter(r => r.DATE >= cutoff7Str);
+                    const olderRows = recentOrdersLog.filter(r => r.DATE < cutoff7Str);
+
                     const olderByDate = new Map<string, LogRow[]>();
                     olderRows.forEach(r => {
-                      if (!olderByDate.has(r.Date)) olderByDate.set(r.Date, []);
-                      olderByDate.get(r.Date)!.push(r);
+                      if (!olderByDate.has(r.DATE)) olderByDate.set(r.DATE, []);
+                      olderByDate.get(r.DATE)!.push(r);
                     });
                     const olderDates = [...olderByDate.keys()].sort((a, b) =>
                       dateSortAsc ? a.localeCompare(b) : b.localeCompare(a)
                     );
+
                     return (
                       <table className="w-full border-collapse">
                         <thead>
@@ -1545,21 +1473,23 @@ export default function StockNurYadi() {
                           </tr>
                         </thead>
                         <tbody>
+                          {/* Recent rows (≤7 days) — shown individually */}
                           {recentRows.map((row, idx) => {
                             const nextRow = recentRows[idx + 1];
-                            const isDateBreak = (nextRow && nextRow.Date !== row.Date) || (!nextRow && olderDates.length > 0);
+                            const isDateBreak = (nextRow && nextRow.DATE !== row.DATE) || (!nextRow && olderDates.length > 0);
                             return (
                               <tr key={row.id} className="table-row-hover" style={{ borderBottom: `1px solid ${isDateBreak ? "hsl(var(--foreground))" : border}` }}>
                                 <td className="text-[12px] font-light py-3">
-                                  {new Date(row.Date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                                  {new Date(row.DATE).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                                 </td>
-                                <td className="text-[13px] font-light py-3">{row["Product Name"]}</td>
-                                <td className="text-[13px] font-light py-3 text-center" style={dim}>{row["Starting Balance"]}</td>
-                                <td className="text-[13px] font-light py-3 text-center" style={{ color: "hsl(var(--green))" }}>{row.Qty > 0 ? "+" : ""}{row.Qty}</td>
-                                <td className="text-[13px] font-light py-3 text-center">{row["Ending Balance"]}</td>
+                                <td className="text-[13px] font-light py-3">{row["PRODUCT NAME"]}</td>
+                                <td className="text-[13px] font-light py-3 text-center" style={dim}>{row["STARTING BALANCE"]}</td>
+                                <td className="text-[13px] font-light py-3 text-center" style={{ color: "hsl(var(--green))" }}>{row.QTY > 0 ? "+" : ""}{row.QTY}</td>
+                                <td className="text-[13px] font-light py-3 text-center">{row["ENDING BALANCE"]}</td>
                               </tr>
                             );
                           })}
+                          {/* Older rows (>7 days) — grouped by date, expandable */}
                           {olderDates.map((date, di) => {
                             const rows = olderByDate.get(date)!;
                             const isExpanded = expandedOrderDates.has(date);
@@ -1588,10 +1518,10 @@ export default function StockNurYadi() {
                                 {isExpanded && rows.map((row, ri) => (
                                   <tr key={row.id} className="table-row-hover" style={{ borderBottom: `1px solid ${ri === rows.length - 1 ? (isLast ? border : "hsl(var(--foreground))") : border}`, background: "hsl(var(--card))" }}>
                                     <td className="text-[12px] font-light py-2.5 pl-2" style={dim}>—</td>
-                                    <td className="text-[13px] font-light py-2.5">{row["Product Name"]}</td>
-                                    <td className="text-[13px] font-light py-2.5 text-center" style={dim}>{row["Starting Balance"]}</td>
-                                    <td className="text-[13px] font-light py-2.5 text-center" style={{ color: "hsl(var(--green))" }}>{row.Qty > 0 ? "+" : ""}{row.Qty}</td>
-                                    <td className="text-[13px] font-light py-2.5 text-center">{row["Ending Balance"]}</td>
+                                    <td className="text-[13px] font-light py-2.5">{row["PRODUCT NAME"]}</td>
+                                    <td className="text-[13px] font-light py-2.5 text-center" style={dim}>{row["STARTING BALANCE"]}</td>
+                                    <td className="text-[13px] font-light py-2.5 text-center" style={{ color: "hsl(var(--green))" }}>{row.QTY > 0 ? "+" : ""}{row.QTY}</td>
+                                    <td className="text-[13px] font-light py-2.5 text-center">{row["ENDING BALANCE"]}</td>
                                   </tr>
                                 ))}
                               </>
@@ -1649,16 +1579,20 @@ export default function StockNurYadi() {
               {activityLog.length === 0 ? (
                 <p className="text-[13px]" style={dim}>No entries yet</p>
               ) : (() => {
-                const recentRows = activityLog.filter(r => r.Date >= cutoff7Str);
-                const olderRows = activityLog.filter(r => r.Date < cutoff7Str);
+                // Split into recent (≤7 days) shown individually, and older grouped by date
+                const recentRows = activityLog.filter(r => r.DATE >= cutoff7Str);
+                const olderRows = activityLog.filter(r => r.DATE < cutoff7Str);
+
+                // Group older rows by date
                 const olderByDate = new Map<string, LogRow[]>();
                 olderRows.forEach(r => {
-                  if (!olderByDate.has(r.Date)) olderByDate.set(r.Date, []);
-                  olderByDate.get(r.Date)!.push(r);
+                  if (!olderByDate.has(r.DATE)) olderByDate.set(r.DATE, []);
+                  olderByDate.get(r.DATE)!.push(r);
                 });
                 const olderDates = [...olderByDate.keys()].sort((a, b) =>
                   dateSortAsc ? a.localeCompare(b) : b.localeCompare(a)
                 );
+
                 return (
                   <table className="w-full border-collapse">
                     <thead>
@@ -1678,23 +1612,24 @@ export default function StockNurYadi() {
                       </tr>
                     </thead>
                     <tbody>
+                      {/* Recent rows (≤7 days) — shown individually */}
                       {recentRows.map((row, idx) => {
-                        const canReverse = row.Date === today || row.Date === yesterdayStr;
+                        const canReverse = row.DATE === today || row.DATE === yesterdayStr;
                         const nextRow = recentRows[idx + 1];
-                        const isDateBreak = (nextRow && nextRow.Date !== row.Date) || (!nextRow && olderDates.length > 0);
+                        const isDateBreak = (nextRow && nextRow.DATE !== row.DATE) || (!nextRow && olderDates.length > 0);
                         return (
                           <tr key={row.id} className="table-row-hover" style={{ borderBottom: `1px solid ${isDateBreak ? "hsl(var(--foreground))" : border}` }}>
                             <td className="text-[12px] font-light py-3">
-                              {new Date(row.Date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                              {new Date(row.DATE).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                             </td>
-                            <td className="text-[13px] font-light py-3 text-dim">{row["Product Name"]}</td>
-                            <td className="text-[11px] font-light py-3 text-center tracking-wider uppercase" style={dim}>{row.Type}</td>
-                            <td className="text-[13px] font-light py-3 text-center" style={{ color: row.Qty < 0 ? "hsl(var(--red))" : "hsl(var(--green))" }}>{row.Qty}</td>
-                            <td className="text-[13px] font-light py-3 text-center">{row["Ending Balance"]}</td>
+                            <td className="text-[13px] font-light py-3 text-dim">{row["PRODUCT NAME"]}</td>
+                            <td className="text-[11px] font-light py-3 text-center tracking-wider uppercase" style={dim}>{row.TYPE}</td>
+                            <td className="text-[13px] font-light py-3 text-center" style={{ color: row.QTY < 0 ? "hsl(var(--red))" : "hsl(var(--green))" }}>{row.QTY}</td>
+                            <td className="text-[13px] font-light py-3 text-center">{row["ENDING BALANCE"]}</td>
                             <td className="py-3 text-center">
                               {canReverse && (
                                 <button
-                                  onClick={() => row.Type === "Order" ? reverseOrder(row) : reverseUsage(row)}
+                                  onClick={() => row.TYPE === "Order" ? reverseOrder(row) : reverseUsage(row)}
                                   disabled={reversing === row.id}
                                   className="transition-colors"
                                   style={{ color: "hsl(var(--muted-foreground))", opacity: reversing === row.id ? 0.4 : 1 }}
@@ -1708,6 +1643,7 @@ export default function StockNurYadi() {
                           </tr>
                         );
                       })}
+                      {/* Older rows (>7 days) — grouped by date, expandable */}
                       {olderDates.map((date, di) => {
                         const rows = olderByDate.get(date)!;
                         const isExpanded = expandedActivityDates.has(date);
@@ -1736,10 +1672,10 @@ export default function StockNurYadi() {
                             {isExpanded && rows.map((row, ri) => (
                               <tr key={row.id} className="table-row-hover" style={{ borderBottom: `1px solid ${ri === rows.length - 1 ? (isLast ? border : "hsl(var(--foreground))") : border}`, background: "hsl(var(--card))" }}>
                                 <td className="text-[12px] font-light py-2.5 pl-2" style={dim}>—</td>
-                                <td className="text-[13px] font-light py-2.5 text-dim">{row["Product Name"]}</td>
-                                <td className="text-[11px] font-light py-2.5 text-center tracking-wider uppercase" style={dim}>{row.Type}</td>
-                                <td className="text-[13px] font-light py-2.5 text-center" style={{ color: row.Qty < 0 ? "hsl(var(--red))" : "hsl(var(--green))" }}>{row.Qty}</td>
-                                <td className="text-[13px] font-light py-2.5 text-center">{row["Ending Balance"]}</td>
+                                <td className="text-[13px] font-light py-2.5 text-dim">{row["PRODUCT NAME"]}</td>
+                                <td className="text-[11px] font-light py-2.5 text-center tracking-wider uppercase" style={dim}>{row.TYPE}</td>
+                                <td className="text-[13px] font-light py-2.5 text-center" style={{ color: row.QTY < 0 ? "hsl(var(--red))" : "hsl(var(--green))" }}>{row.QTY}</td>
+                                <td className="text-[13px] font-light py-2.5 text-center">{row["ENDING BALANCE"]}</td>
                                 <td />
                               </tr>
                             ))}
@@ -1802,12 +1738,12 @@ export default function StockNurYadi() {
                       const isSaving = savingOrderEdit === row.id;
                       const parsedEdit = parseInt(editingOrderQty);
                       const previewBal = isEditing && !isNaN(parsedEdit)
-                        ? row["Starting Balance"] + parsedEdit
-                        : row["Ending Balance"];
+                        ? row["STARTING BALANCE"] + parsedEdit
+                        : row["ENDING BALANCE"];
                       return (
                         <tr key={row.id} className="border-b" style={{ borderColor: "hsl(var(--border))", opacity: isSaving ? 0.4 : 1, transition: "opacity 0.15s" }}>
-                          <td className="text-[13px] font-light py-3">{row["Product Name"]}</td>
-                          <td className="text-[13px] font-light py-3 text-center" style={dim}>{row["Starting Balance"]}</td>
+                          <td className="text-[13px] font-light py-3">{row["PRODUCT NAME"]}</td>
+                          <td className="text-[13px] font-light py-3 text-center" style={dim}>{row["STARTING BALANCE"]}</td>
                           <td className="text-[13px] font-light py-3 text-center">
                             {isEditing ? (
                               <input
@@ -1830,10 +1766,10 @@ export default function StockNurYadi() {
                                 className="cursor-pointer"
                                 style={{ color: "hsl(var(--green))" }}
                                 title="Click to edit"
-                                onClick={() => { setEditingOrderRow(row.id); setEditingOrderQty(String(row.Qty)); }}
+                                onClick={() => { setEditingOrderRow(row.id); setEditingOrderQty(String(row.QTY)); }}
                                 onMouseEnter={e => (e.currentTarget.style.textDecoration = "underline")}
                                 onMouseLeave={e => (e.currentTarget.style.textDecoration = "none")}
-                              >+{row.Qty}</span>
+                              >+{row.QTY}</span>
                             )}
                           </td>
                           <td className="text-[13px] font-light py-3 text-center" style={isEditing ? dim : {}}>{previewBal}</td>
@@ -1916,41 +1852,22 @@ export default function StockNurYadi() {
                           onMouseEnter={e => (e.currentTarget.style.background = "hsl(var(--card))")}
                           onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                         >
-                          <td className="text-[13px] font-light py-3" style={dim}>
-                            {new Date(group.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                          <td className="text-[12px] font-light py-3" style={dim}>
+                            {new Date(group.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                           </td>
-                          <td className="text-[13px] font-light py-3 text-center">{group.grn !== group.date ? group.grn : "—"}</td>
+                          <td className="text-[12px] font-light py-3 text-center" style={dim}>{group.grn}</td>
                           <td className="text-[12px] font-light py-3 text-center" style={dim}>{group.rows.length}</td>
                           <td className="py-3 text-center">
                             <span style={{ ...dim, fontSize: "11px", display: "inline-block", transition: "transform 0.15s", transform: expandedGRNs.has(group.key) ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                           </td>
                         </tr>
-                        {expandedGRNs.has(group.key) && (
-                          <tr key={`${group.key}-detail`} style={{ borderBottom: `1px solid hsl(var(--border))` }}>
-                            <td colSpan={4} className="pb-4 pt-1 px-0">
-                              <table className="w-full border-collapse">
-                                <thead>
-                                  <tr style={{ borderBottom: `1px solid hsl(var(--border))` }}>
-                                    <th className="label-uppercase font-normal text-left py-2 pl-4" style={dim}>Product</th>
-                                    <th className="label-uppercase font-normal text-center py-2" style={dim}>Prev Bal</th>
-                                    <th className="label-uppercase font-normal text-center py-2" style={dim}>Qty</th>
-                                    <th className="label-uppercase font-normal text-center py-2 pr-4" style={dim}>New Bal</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {group.rows.map(r => (
-                                    <tr key={r.id} style={{ borderBottom: `1px solid hsl(var(--border))` }}>
-                                      <td className="text-[12px] font-light py-2 pl-4">{r["Product Name"]}</td>
-                                      <td className="text-[12px] font-light py-2 text-center" style={dim}>{r["Starting Balance"]}</td>
-                                      <td className="text-[12px] font-light py-2 text-center" style={{ color: "hsl(var(--green))" }}>+{r.Qty}</td>
-                                      <td className="text-[12px] font-light py-2 text-center pr-4">{r["Ending Balance"]}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </td>
+                        {expandedGRNs.has(group.key) && group.rows.map((row, ri) => (
+                          <tr key={row.id} className="border-b" style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}>
+                            <td className="text-[12px] font-light py-2.5 pl-2" style={dim}>—</td>
+                            <td className="text-[13px] font-light py-2.5" colSpan={2}>{row["PRODUCT NAME"]}</td>
+                            <td className="text-[12px] font-light py-2.5 text-center" style={{ color: "hsl(var(--green))" }}>+{row.QTY}</td>
                           </tr>
-                        )}
+                        ))}
                       </>
                     ))}
                   </tbody>
