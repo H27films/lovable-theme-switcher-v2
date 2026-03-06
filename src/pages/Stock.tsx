@@ -1117,6 +1117,7 @@ export default function Stock() {
                           <th className="label-uppercase font-normal text-center pb-2 pt-1">Supplier</th>
                           <th className="label-uppercase font-normal text-center pb-2 pt-1">Qty</th>
                           <th className="label-uppercase font-normal text-center pb-2 pt-1">Office Bal</th>
+                          <th className="label-uppercase font-normal text-center pb-2 pt-1">GRN</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1132,6 +1133,7 @@ export default function Stock() {
                               {row.QTY > 0 ? "+" : ""}{row.QTY}
                             </td>
                             <td className="text-[12px] font-light py-2 text-center">{row["OFFICE BALANCE"] ?? "—"}</td>
+                            <td className="text-[11px] font-light py-2 text-center" style={dim}>{row.GRN || "—"}</td>
                           </tr>
                         ))}
                       </tbody>

@@ -218,7 +218,7 @@ const Index = () => {
           "QTY": line.qty,
           "ENDING BALANCE": endingBalance,
           "OFFICE BALANCE": endingBalance,
-          "GRN": null,
+          "GRN": `OFFICE ${today.slice(8,10)}${today.slice(5,7)}${today.slice(2,4)}`,
         });
         if (logErr) { console.error("AllFileLog confirm error:", logErr); setConfirmError(logErr.message || "Log write failed — check console"); }
       }
@@ -514,6 +514,12 @@ const Index = () => {
                     )}
                   </p>
                 </div>
+                {selectedProduct["OFFICE SECTION"] && (
+                  <div>
+                    <p className="text-[10px] tracking-wider uppercase mb-1" style={dim}>Section</p>
+                    <p className="text-[15px] font-light">{selectedProduct["OFFICE SECTION"]}</p>
+                  </div>
+                )}
               </div>
 
               {/* Prices */}
