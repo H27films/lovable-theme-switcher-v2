@@ -1109,38 +1109,18 @@ const Index = () => {
 
                 {/* Summary + Confirm */}
                 <div className="mt-6 pt-4 border-t" style={{ borderColor: border }}>
-                  {(() => {
-                    const totalUnits = orderLines.length;
-                    const totalQty = orderLines.reduce((s, l) => s + l.qty * (l.product["UNITS/ORDER"] ?? 1), 0);
-                    const totalValue = orderLines.reduce((sum, line) => {
-                      const chosenProduct = line.supplierChoice
-                        ? products.find(p => p["PRODUCT NAME"] === line.product["PRODUCT NAME"] && p["SUPPLIER"] === line.supplierChoice) ?? line.product
-                        : line.product;
-                      return sum + ((chosenProduct["SUPPLIER PRICE"] ?? 0) * line.qty);
-                    }, 0);
-                    return (
-                      <div className="mb-1 space-y-0.5">
-                        <p className="text-[11px] tracking-wider uppercase" style={dim}>
-                          {totalUnits} {totalUnits === 1 ? "item" : "items"} · {totalQty} units total
-                        </p>
-                        <p className="text-[11px] tracking-wider uppercase" style={{ color: "hsl(var(--foreground))" }}>
-                          Total Value: RM {totalValue.toFixed(2)}
-                        </p>
-                      </div>
-                    );
-                  })()}
                   {orderLines.some(l => l.supplierChoice === null && products.filter(s => s["PRODUCT NAME"] === l.product["PRODUCT NAME"] && s.id !== l.product.id).length > 0) && (
-                    <p className="text-[11px] mt-1" style={{ color: "hsl(var(--red))" }}>
+                    <p className="text-[11px] mb-2" style={{ color: "hsl(var(--red))" }}>
                       Please select a supplier for all items before submitting
                     </p>
                   )}
                   {orderSuccess ? (
-                    <p className="text-[11px] mt-3" style={{ color: "hsl(var(--green, 142 71% 45%))" }}>
+                    <p className="text-[11px]" style={{ color: "hsl(var(--green, 142 71% 45%))" }}>
                       ✓ Order confirmed — office balances updated
                     </p>
                   ) : (
                     <button
-                      className="minimal-btn mt-3"
+                      className="minimal-btn"
                       style={{ opacity: (orderLines.length === 0 || orderSubmitting) ? 0.4 : 1 }}
                       disabled={orderLines.length === 0 || orderSubmitting}
                       onClick={handleOrderConfirm}
@@ -1151,6 +1131,121 @@ const Index = () => {
                   {confirmError && (
                     <p className="text-[11px] mt-2" style={{ color: "hsl(var(--red))" }}>✗ {confirmError}</p>
                   )}
+
+                  {/* Order Summary grouped by supplier / GRN */}
+                  {orderLines.length > 0 && (() => {
+                    const today = new Date();
+                    const dd = String(today.getDate()).padStart(2, "0");
+                    const mm = String(today.getMonth() + 1).padStart(2, "0");
+                    const yy = String(today.getFullYear()).slice(-2);
+                    const dateStr = `${dd}${mm}${yy}`;
+
+                    // Group lines by resolved supplier
+                    const groups: Record<string, typeof orderLines> = {};
+                    orderLines.forEach(line => {
+                      const sup = line.supplierChoice ?? line.product["SUPPLIER"] ?? "Unknown";
+                      if (!groups[sup]) groups[sup] = [];
+                      groups[sup].push(line);
+                    });
+                    const supplierNames = Object.keys(groups);
+                    const multi = supplierNames.length > 1;
+
+                    const grandTotal = orderLines.reduce((sum, line) => {
+                      const rp = line.supplierChoice
+                        ? products.find(p => p["PRODUCT NAME"] === line.product["PRODUCT NAME"] && p["SUPPLIER"] === line.supplierChoice) ?? line.product
+                        : line.product;
+                      return sum + (rp["SUPPLIER PRICE"] ?? 0) * line.qty;
+                    }, 0);
+                    const grandUnits = orderLines.reduce((s, l) => s + l.qty * (l.product["UNITS/ORDER"] ?? 1), 0);
+
+                    return (
+                      <div className="mt-5">
+                        <p className="text-[10px] tracking-widest uppercase mb-3" style={dim}>Order Summary</p>
+
+                        {supplierNames.map((supplier, sIdx) => {
+                          const grpLines = groups[supplier];
+                          const grn = multi ? `OFFICE ${dateStr} (${sIdx + 1})` : `OFFICE ${dateStr}`;
+                          const subtotal = grpLines.reduce((s, l) => {
+                            const rp = l.supplierChoice
+                              ? products.find(p => p["PRODUCT NAME"] === l.product["PRODUCT NAME"] && p["SUPPLIER"] === l.supplierChoice) ?? l.product
+                              : l.product;
+                            return s + (rp["SUPPLIER PRICE"] ?? 0) * l.qty;
+                          }, 0);
+
+                          return (
+                            <div key={supplier} className="mb-5">
+                              {/* Supplier header */}
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-[12px] font-semibold tracking-wide" style={{ color: "hsl(var(--foreground))" }}>{supplier}</span>
+                                <span className="text-[10px] tracking-wider font-mono" style={dim}>{grn}</span>
+                              </div>
+
+                              {/* Product lines */}
+                              {grpLines.map((line, lIdx) => {
+                                const rp = line.supplierChoice
+                                  ? products.find(p => p["PRODUCT NAME"] === line.product["PRODUCT NAME"] && p["SUPPLIER"] === line.supplierChoice) ?? line.product
+                                  : line.product;
+                                const unitPrice = rp["SUPPLIER PRICE"] ?? 0;
+                                const unitsPerOrder = line.product["UNITS/ORDER"] ?? 1;
+                                const lineTotal = unitPrice * line.qty;
+                                const globalIdx = orderLines.indexOf(line);
+
+                                return (
+                                  <div key={lIdx} className="flex items-center gap-2 py-1.5 border-b" style={{ borderColor: border }}>
+                                    {/* Name */}
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-[11px] leading-tight truncate" style={{ color: "hsl(var(--foreground))" }}>{line.product["PRODUCT NAME"]}</p>
+                                      {unitsPerOrder > 1 && (
+                                        <p className="text-[10px]" style={dim}>{line.qty * unitsPerOrder} units received</p>
+                                      )}
+                                    </div>
+                                    {/* Qty editor */}
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <button
+                                        className="w-5 h-5 flex items-center justify-center rounded text-[12px]"
+                                        style={dim}
+                                        onClick={() => setOrderLines(prev => prev.map((ol, i) => i === globalIdx && ol.qty > 1 ? { ...ol, qty: ol.qty - 1 } : ol))}
+                                      >−</button>
+                                      <span className="text-[12px] w-4 text-center" style={{ color: "hsl(var(--foreground))" }}>{line.qty}</span>
+                                      <button
+                                        className="w-5 h-5 flex items-center justify-center rounded text-[12px]"
+                                        style={dim}
+                                        onClick={() => setOrderLines(prev => prev.map((ol, i) => i === globalIdx ? { ...ol, qty: ol.qty + 1 } : ol))}
+                                      >+</button>
+                                    </div>
+                                    {/* Line total */}
+                                    <span className="text-[11px] w-16 text-right shrink-0" style={dim}>RM {lineTotal.toFixed(2)}</span>
+                                    {/* Remove */}
+                                    <button
+                                      className="shrink-0 text-[14px] leading-none ml-1"
+                                      style={{ color: "hsl(var(--red))" }}
+                                      onClick={() => setOrderLines(prev => prev.filter((_, i) => i !== globalIdx))}
+                                    >×</button>
+                                  </div>
+                                );
+                              })}
+
+                              {/* Subtotal */}
+                              <div className="flex justify-between mt-1.5">
+                                <span className="text-[10px] tracking-wider uppercase" style={dim}>
+                                  {grpLines.reduce((s, l) => s + l.qty, 0)} orders
+                                </span>
+                                <span className="text-[11px] font-medium" style={{ color: "hsl(var(--foreground))" }}>RM {subtotal.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Grand total */}
+                        <div className="flex justify-between pt-2 border-t" style={{ borderColor: border }}>
+                          <span className="text-[10px] tracking-wider uppercase" style={dim}>
+                            {orderLines.length} {orderLines.length === 1 ? "item" : "items"} · {grandUnits} units
+                          </span>
+                          <span className="text-[12px] font-semibold" style={{ color: "hsl(var(--foreground))" }}>RM {grandTotal.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}
