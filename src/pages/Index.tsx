@@ -853,9 +853,10 @@ const Index = () => {
             </div>
 
             {/* Supplier filter — compact multi-select dropdown */}
-            <div className="mb-4 relative">
+            <div className="mb-4 relative" ref={supplierDropdownRef}>
               <button
                 onClick={() => setShowSupplierDropdown(v => !v)}
+                onKeyDown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') setShowSupplierDropdown(false); }}
                 className="flex items-center gap-2 text-[11px] tracking-wider uppercase transition-colors px-3 py-1.5"
                 style={{
                   border: `1px solid ${borderActive}`,
