@@ -196,33 +196,52 @@ const Index = () => {
     setOrderSubmitting(true);
     try {
       const today = new Date().toISOString().split("T")[0];
+      const dd = today.slice(8,10), mm = today.slice(5,7), yy = today.slice(2,4);
+      const baseGRN = `OFFICE ${dd}${mm}${yy}`;
+
+      // Resolve each line to its chosen product and supplier
+      type ResolvedLine = { chosenProduct: typeof products[0]; qty: number };
+      const supplierGroups: Record<string, ResolvedLine[]> = {};
       for (const line of orderLines) {
         const chosenProduct = line.supplierChoice
           ? products.find(p => p["PRODUCT NAME"] === line.product["PRODUCT NAME"] && p["SUPPLIER"] === line.supplierChoice) ?? line.product
           : line.product;
-        const currentBalance = Number(chosenProduct["OFFICE BALANCE"] ?? 0);
-        const endingBalance = currentBalance + line.qty;
+        const supplierKey = chosenProduct["SUPPLIER"] ?? "Unknown";
+        if (!supplierGroups[supplierKey]) supplierGroups[supplierKey] = [];
+        supplierGroups[supplierKey].push({ chosenProduct, qty: line.qty });
+      }
 
-        // Update ALL rows for this product name
-        await (supabase as any)
-          .from("AllFileProducts")
-          .update({ "OFFICE BALANCE": endingBalance })
-          .eq("PRODUCT NAME", chosenProduct["PRODUCT NAME"]);
+      const supplierKeys = Object.keys(supplierGroups);
+      const multiSupplier = supplierKeys.length > 1;
 
-        // Log to AllFileLog
-        const { error: logErr } = await (supabase as any).from("AllFileLog").insert({
-          "DATE": today,
-          "PRODUCT NAME": chosenProduct["PRODUCT NAME"],
-          "BRANCH": "Office",
-          "SUPPLIER": chosenProduct["SUPPLIER"] ?? null,
-          "TYPE": "Order",
-          "STARTING BALANCE": currentBalance,
-          "QTY": line.qty,
-          "ENDING BALANCE": endingBalance,
-          "OFFICE BALANCE": endingBalance,
-          "GRN": `OFFICE ${today.slice(8,10)}${today.slice(5,7)}${today.slice(2,4)}`,
-        });
-        if (logErr) { console.error("AllFileLog confirm error:", logErr); setConfirmError(logErr.message || "Log write failed — check console"); }
+      for (let gi = 0; gi < supplierKeys.length; gi++) {
+        const supplierKey = supplierKeys[gi];
+        const grn = multiSupplier ? `${baseGRN} (${gi + 1})` : baseGRN;
+        for (const { chosenProduct, qty } of supplierGroups[supplierKey]) {
+          const currentBalance = Number(chosenProduct["OFFICE BALANCE"] ?? 0);
+          const endingBalance = currentBalance + qty;
+
+          // Update ALL rows for this product name
+          await (supabase as any)
+            .from("AllFileProducts")
+            .update({ "OFFICE BALANCE": endingBalance })
+            .eq("PRODUCT NAME", chosenProduct["PRODUCT NAME"]);
+
+          // Log to AllFileLog
+          const { error: logErr } = await (supabase as any).from("AllFileLog").insert({
+            "DATE": today,
+            "PRODUCT NAME": chosenProduct["PRODUCT NAME"],
+            "BRANCH": "Office",
+            "SUPPLIER": chosenProduct["SUPPLIER"] ?? null,
+            "TYPE": "Order",
+            "STARTING BALANCE": currentBalance,
+            "QTY": qty,
+            "ENDING BALANCE": endingBalance,
+            "OFFICE BALANCE": endingBalance,
+            "GRN": grn,
+          });
+          if (logErr) { console.error("AllFileLog confirm error:", logErr); setConfirmError(logErr.message || "Log write failed — check console"); }
+        }
       }
       await fetchProducts();
       setOrderLines([]);
