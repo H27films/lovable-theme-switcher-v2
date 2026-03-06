@@ -218,8 +218,10 @@ const Index = () => {
         const supplierKey = supplierKeys[gi];
         const grn = multiSupplier ? `${baseGRN} (${gi + 1})` : baseGRN;
         for (const { chosenProduct, qty } of supplierGroups[supplierKey]) {
+          const unitsPerOrder = chosenProduct["UNITS/ORDER"] ?? 1;
+          const actualQty = qty * unitsPerOrder;
           const currentBalance = Number(chosenProduct["OFFICE BALANCE"] ?? 0);
-          const endingBalance = currentBalance + qty;
+          const endingBalance = currentBalance + actualQty;
 
           // Update ALL rows for this product name
           await (supabase as any)
@@ -235,7 +237,7 @@ const Index = () => {
             "SUPPLIER": chosenProduct["SUPPLIER"] ?? null,
             "TYPE": "Order",
             "STARTING BALANCE": currentBalance,
-            "QTY": qty,
+            "QTY": actualQty,
             "ENDING BALANCE": endingBalance,
             "OFFICE BALANCE": endingBalance,
             "GRN": grn,
@@ -1070,7 +1072,14 @@ const Index = () => {
                             >
                               <ChevronLeft size={12} />
                             </button>
-                            <span className="text-[13px] font-light px-3 min-w-[32px] text-center">{line.qty}</span>
+                            <span className="text-[13px] font-light px-3 min-w-[32px] text-center">
+              {line.qty}
+              {(line.product["UNITS/ORDER"] ?? 1) > 1 && (
+                <span className="text-[10px] ml-1" style={{ color: "hsl(var(--green, 142 71% 45%))" }}>
+                  ({line.qty * (line.product["UNITS/ORDER"] ?? 1)} units)
+                </span>
+              )}
+            </span>
                             <button
                               className="px-2 py-1.5 transition-colors text-[13px]"
                               style={dim}
@@ -1091,7 +1100,7 @@ const Index = () => {
                 <div className="mt-6 pt-4 border-t" style={{ borderColor: border }}>
                   {(() => {
                     const totalUnits = orderLines.length;
-                    const totalQty = orderLines.reduce((s, l) => s + l.qty, 0);
+                    const totalQty = orderLines.reduce((s, l) => s + l.qty * (l.product["UNITS/ORDER"] ?? 1), 0);
                     const totalValue = orderLines.reduce((sum, line) => {
                       const chosenProduct = line.supplierChoice
                         ? products.find(p => p["PRODUCT NAME"] === line.product["PRODUCT NAME"] && p["SUPPLIER"] === line.supplierChoice) ?? line.product
