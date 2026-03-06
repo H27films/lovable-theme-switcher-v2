@@ -884,15 +884,15 @@ const Index = () => {
       {showOrderPanel && (
         <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setShowOrderPanel(false)}>
           <div
-            className="h-full w-full max-w-[780px] overflow-y-auto p-10"
+            className="h-full w-full max-w-[650px] overflow-y-auto p-10"
             style={{ background: "hsl(var(--background))", borderLeft: `1px solid hsl(var(--border))` }}
             onClick={e => e.stopPropagation()}
           >
             {/* Panel header */}
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h2 className="text-[26px] font-light tracking-tight">New Order</h2>
-                <p className="text-[15px] tracking-wider uppercase mt-1" style={dim}>Office stock order</p>
+                <h2 className="text-[24px] font-light tracking-tight">New Order</h2>
+                <p className="text-[14.5px] tracking-wider uppercase mt-1" style={dim}>Office stock order</p>
               </div>
               <button onClick={() => setShowOrderPanel(false)} style={dim}
                 onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
@@ -906,7 +906,7 @@ const Index = () => {
               <button
                 onClick={() => setShowSupplierDropdown(v => !v)}
                 onKeyDown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') setShowSupplierDropdown(false); }}
-                className="flex items-center gap-2 text-[15px] tracking-wider uppercase transition-colors px-3 py-1.5"
+                className="flex items-center gap-2 text-[14.5px] tracking-wider uppercase transition-colors px-3 py-1.5"
                 style={{
                   border: `1px solid ${borderActive}`,
                   color: "hsl(var(--foreground))",
@@ -930,7 +930,7 @@ const Index = () => {
                 >
                   {/* Clear all */}
                   <button
-                    className="w-full text-left px-3 py-2 text-[15px] tracking-wider uppercase transition-colors flex items-center gap-2"
+                    className="w-full text-left px-3 py-2 text-[14.5px] tracking-wider uppercase transition-colors flex items-center gap-2"
                     style={{ color: "hsl(var(--foreground))", background: orderSupplierFilter.length === 0 ? cardBg : "transparent", borderBottom: `1px solid ${border}` }}
                     onClick={() => setOrderSupplierFilter([])}
                   >
@@ -943,7 +943,7 @@ const Index = () => {
                     return (
                       <button
                         key={s}
-                        className="w-full text-left px-3 py-2 text-[15px] tracking-wider uppercase transition-colors flex items-center gap-2"
+                        className="w-full text-left px-3 py-2 text-[14.5px] tracking-wider uppercase transition-colors flex items-center gap-2"
                         style={{ color: "hsl(var(--foreground))", background: selected ? cardBg : "transparent" }}
                         onClick={() => setOrderSupplierFilter(prev =>
                           prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
@@ -960,11 +960,11 @@ const Index = () => {
 
             {/* Add product search */}
             <div ref={orderSearchRef} className="relative mb-6">
-              <p className="text-[15px] tracking-wider uppercase mb-2" style={dim}>Add Product</p>
+              <p className="text-[14.5px] tracking-wider uppercase mb-2" style={dim}>Add Product</p>
               <div className="flex items-center gap-2 border-b pb-2" style={{ borderColor: borderActive }}>
                 <input
                   type="text"
-                  className="flex-1 bg-transparent outline-none text-[15px] font-light"
+                  className="flex-1 bg-transparent outline-none text-[14.5px] font-light"
                   placeholder="Search to add..."
                   value={orderSearch}
                   onChange={e => { setOrderSearch(e.target.value); setShowOrderDropdown(true); setOrderActiveIndex(-1); }}
@@ -995,15 +995,15 @@ const Index = () => {
                       onMouseEnter={() => setOrderActiveIndex(i)}
                     >
                       <div>
-                        <span className="text-[15px] font-light">{p["PRODUCT NAME"]}</span>
+                        <span className="text-[14.5px] font-light">{p["PRODUCT NAME"]}</span>
                         {orderSupplierFilter.length === 0 && p["SUPPLIER"] && (
-                          <span className="text-[15px] ml-2" style={dim}>{p["SUPPLIER"]}</span>
+                          <span className="text-[14.5px] ml-2" style={dim}>{p["SUPPLIER"]}</span>
                         )}
                         {(p["UNITS/ORDER"] ?? 1) > 1 && (
-                          <span className="text-[15px] ml-2 font-medium" style={{ color: "hsl(var(--foreground))" }}>× {p["UNITS/ORDER"]} units/order</span>
+                          <span className="text-[14.5px] ml-2 font-medium" style={{ color: "hsl(var(--foreground))" }}>× {p["UNITS/ORDER"]} units/order</span>
                         )}
                       </div>
-                      <span className="text-[15px] font-light" style={{
+                      <span className="text-[14.5px] font-light" style={{
                         color: checkBelowPar(p["OFFICE BALANCE"], p["PAR"])
                           ? "hsl(var(--red))" : "hsl(var(--muted-foreground))"
                       }}>
@@ -1018,7 +1018,7 @@ const Index = () => {
             {/* Order lines */}
             {orderLines.length > 0 && (
               <div>
-                <p className="text-[15px] tracking-wider uppercase mb-3" style={dim}>Order Items</p>
+                <p className="text-[14.5px] tracking-wider uppercase mb-3" style={dim}>Order Items</p>
                 <div className="space-y-3">
                   {orderLines.map((line, idx) => {
                     const siblings = products.filter(
@@ -1034,7 +1034,7 @@ const Index = () => {
                       <div key={idx} className="p-3" style={{ border: `1px solid ${needsChoice ? borderActive : border}` }}>
                         <div className="flex items-start justify-between mb-2">
                           <div>
-                            <p className="text-[15px] font-light">{line.product["PRODUCT NAME"]}</p>
+                            <p className="text-[14.5px] font-light">{line.product["PRODUCT NAME"]}</p>
                             {/* Supplier choice prompt */}
                             {siblings.length > 0 && (
                               <div className="flex items-center gap-2 mt-1.5">
@@ -1044,7 +1044,7 @@ const Index = () => {
                                     onClick={() => setOrderLines(prev => prev.map((l, i) =>
                                       i === idx ? { ...l, supplierChoice: s["SUPPLIER"] } : l
                                     ))}
-                                    className="text-[15px] tracking-wider uppercase px-2 py-1 transition-colors"
+                                    className="text-[14.5px] tracking-wider uppercase px-2 py-1 transition-colors"
                                     style={{
                                       border: `1px solid ${line.supplierChoice === s["SUPPLIER"] ? borderActive : border}`,
                                       color: line.supplierChoice === s["SUPPLIER"] ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
@@ -1059,14 +1059,14 @@ const Index = () => {
                             )}
                             {/* Single supplier — show supplier name + price */}
                             {siblings.length === 0 && (
-                              <p className="text-[15px] mt-0.5" style={dim}>
+                              <p className="text-[14.5px] mt-0.5" style={dim}>
                                 {line.product["SUPPLIER"]}
                                 {line.product["SUPPLIER PRICE"] !== null && ` · RM ${fmtPrice(line.product["SUPPLIER PRICE"])}`}
                               </p>
                             )}
                             {/* Units/Order badge */}
                             {(line.product["UNITS/ORDER"] ?? 1) > 1 && (
-                              <p className="text-[15px] mt-0.5" style={{ color: "hsl(var(--foreground))", fontWeight: 500 }}>
+                              <p className="text-[14.5px] mt-0.5" style={{ color: "hsl(var(--foreground))", fontWeight: 500 }}>
                                 × {line.product["UNITS/ORDER"]} units/order
                               </p>
                             )}
@@ -1082,7 +1082,7 @@ const Index = () => {
                         </div>
                         {/* Balance + Qty */}
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-[15px]" style={dim}>
+                          <span className="text-[14.5px]" style={dim}>
                             Balance: <span style={{ color: checkBelowPar(line.product["OFFICE BALANCE"], line.product["PAR"]) ? "hsl(var(--red))" : "hsl(var(--foreground))" }}>
                               {chosenSupplier?.["OFFICE BALANCE"] ?? line.product["OFFICE BALANCE"] ?? "—"}
                             </span>
@@ -1090,7 +1090,7 @@ const Index = () => {
                           {/* Qty stepper */}
                           <div className="flex items-center" style={{ border: `1px solid ${borderActive}` }}>
                             <button
-                              className="px-2 py-1.5 transition-colors text-[15px]"
+                              className="px-2 py-1.5 transition-colors text-[14.5px]"
                               style={dim}
                               onClick={() => setOrderLines(prev => prev.map((l, i) => i === idx ? { ...l, qty: Math.max(1, l.qty - 1) } : l))}
                               onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
@@ -1098,16 +1098,16 @@ const Index = () => {
                             >
                               <ChevronLeft size={12} />
                             </button>
-                            <span className="text-[15px] font-light px-3 min-w-[32px] text-center">
+                            <span className="text-[14.5px] font-light px-3 min-w-[32px] text-center">
               {line.qty}
               {(line.product["UNITS/ORDER"] ?? 1) > 1 && (
-                <span className="text-[15px] ml-1" style={{ color: "hsl(var(--green, 142 71% 45%))" }}>
+                <span className="text-[14.5px] ml-1" style={{ color: "hsl(var(--green, 142 71% 45%))" }}>
                   ({line.qty * (line.product["UNITS/ORDER"] ?? 1)} units)
                 </span>
               )}
             </span>
                             <button
-                              className="px-2 py-1.5 transition-colors text-[15px]"
+                              className="px-2 py-1.5 transition-colors text-[14.5px]"
                               style={dim}
                               onClick={() => setOrderLines(prev => prev.map((l, i) => i === idx ? { ...l, qty: l.qty + 1 } : l))}
                               onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
@@ -1125,12 +1125,12 @@ const Index = () => {
                 {/* Summary + Confirm */}
                 <div className="mt-6 pt-4 border-t" style={{ borderColor: border }}>
                   {orderLines.some(l => l.supplierChoice === null && products.filter(s => s["PRODUCT NAME"] === l.product["PRODUCT NAME"] && s.id !== l.product.id).length > 0) && (
-                    <p className="text-[15px] mb-2" style={{ color: "hsl(var(--red))" }}>
+                    <p className="text-[14.5px] mb-2" style={{ color: "hsl(var(--red))" }}>
                       Please select a supplier for all items before submitting
                     </p>
                   )}
                   {orderSuccess ? (
-                    <p className="text-[15px]" style={{ color: "hsl(var(--green, 142 71% 45%))" }}>
+                    <p className="text-[14.5px]" style={{ color: "hsl(var(--green, 142 71% 45%))" }}>
                       ✓ Order confirmed — office balances updated
                     </p>
                   ) : (
@@ -1144,7 +1144,7 @@ const Index = () => {
                     </button>
                   )}
                   {confirmError && (
-                    <p className="text-[15px] mt-2" style={{ color: "hsl(var(--red))" }}>✗ {confirmError}</p>
+                    <p className="text-[14.5px] mt-2" style={{ color: "hsl(var(--red))" }}>✗ {confirmError}</p>
                   )}
 
                   {/* Order Summary grouped by supplier / GRN */}
@@ -1175,7 +1175,7 @@ const Index = () => {
 
                     return (
                       <div className="mt-5">
-                        <p className="text-[15px] tracking-widest uppercase mb-3" style={dim}>Order Summary</p>
+                        <p className="text-[14.5px] tracking-widest uppercase mb-3" style={dim}>Order Summary</p>
 
                         {supplierNames.map((supplier, sIdx) => {
                           const grpLines = groups[supplier];
@@ -1191,8 +1191,8 @@ const Index = () => {
                             <div key={supplier} className="mb-5">
                               {/* Supplier header */}
                               <div className="flex items-center justify-between mb-2">
-                                <span className="text-[15px] font-semibold tracking-wide" style={{ color: "hsl(var(--foreground))" }}>{supplier}</span>
-                                <span className="text-[15px] tracking-wider font-mono" style={dim}>{grn}</span>
+                                <span className="text-[14.5px] font-semibold tracking-wide" style={{ color: "hsl(var(--foreground))" }}>{supplier}</span>
+                                <span className="text-[14.5px] tracking-wider font-mono" style={dim}>{grn}</span>
                               </div>
 
                               {/* Product lines */}
@@ -1209,30 +1209,30 @@ const Index = () => {
                                   <div key={lIdx} className="flex items-center gap-2 py-1.5 border-b" style={{ borderColor: border }}>
                                     {/* Name */}
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-[15px] leading-tight truncate" style={{ color: "hsl(var(--foreground))" }}>{line.product["PRODUCT NAME"]}</p>
+                                      <p className="text-[14.5px] leading-tight truncate" style={{ color: "hsl(var(--foreground))" }}>{line.product["PRODUCT NAME"]}</p>
                                       {unitsPerOrder > 1 && (
-                                        <p className="text-[15px]" style={dim}>{line.qty * unitsPerOrder} units received</p>
+                                        <p className="text-[14.5px]" style={dim}>{line.qty * unitsPerOrder} units received</p>
                                       )}
                                     </div>
                                     {/* Qty editor */}
                                     <div className="flex items-center gap-1 shrink-0">
                                       <button
-                                        className="w-5 h-5 flex items-center justify-center rounded text-[15px]"
+                                        className="w-5 h-5 flex items-center justify-center rounded text-[14.5px]"
                                         style={dim}
                                         onClick={() => setOrderLines(prev => prev.map((ol, i) => i === globalIdx && ol.qty > 1 ? { ...ol, qty: ol.qty - 1 } : ol))}
                                       >−</button>
-                                      <span className="text-[15px] w-4 text-center" style={{ color: "hsl(var(--foreground))" }}>{line.qty}</span>
+                                      <span className="text-[14.5px] w-4 text-center" style={{ color: "hsl(var(--foreground))" }}>{line.qty}</span>
                                       <button
-                                        className="w-5 h-5 flex items-center justify-center rounded text-[15px]"
+                                        className="w-5 h-5 flex items-center justify-center rounded text-[14.5px]"
                                         style={dim}
                                         onClick={() => setOrderLines(prev => prev.map((ol, i) => i === globalIdx ? { ...ol, qty: ol.qty + 1 } : ol))}
                                       >+</button>
                                     </div>
                                     {/* Line total */}
-                                    <span className="text-[15px] w-16 text-right shrink-0" style={dim}>RM {lineTotal.toFixed(2)}</span>
+                                    <span className="text-[14.5px] w-16 text-right shrink-0" style={dim}>RM {lineTotal.toFixed(2)}</span>
                                     {/* Remove */}
                                     <button
-                                      className="shrink-0 text-[15px] leading-none ml-1"
+                                      className="shrink-0 text-[14.5px] leading-none ml-1"
                                       style={{ color: "hsl(var(--red))" }}
                                       onClick={() => setOrderLines(prev => prev.filter((_, i) => i !== globalIdx))}
                                     >×</button>
@@ -1242,10 +1242,10 @@ const Index = () => {
 
                               {/* Subtotal */}
                               <div className="flex justify-between mt-1.5">
-                                <span className="text-[15px] tracking-wider uppercase" style={dim}>
+                                <span className="text-[14.5px] tracking-wider uppercase" style={dim}>
                                   {grpLines.reduce((s, l) => s + l.qty, 0)} orders
                                 </span>
-                                <span className="text-[15px] font-medium" style={{ color: "hsl(var(--foreground))" }}>RM {subtotal.toFixed(2)}</span>
+                                <span className="text-[14.5px] font-medium" style={{ color: "hsl(var(--foreground))" }}>RM {subtotal.toFixed(2)}</span>
                               </div>
                             </div>
                           );
@@ -1253,10 +1253,10 @@ const Index = () => {
 
                         {/* Grand total */}
                         <div className="flex justify-between pt-2 border-t" style={{ borderColor: border }}>
-                          <span className="text-[15px] tracking-wider uppercase" style={dim}>
+                          <span className="text-[14.5px] tracking-wider uppercase" style={dim}>
                             {orderLines.length} {orderLines.length === 1 ? "item" : "items"} · {grandUnits} units
                           </span>
-                          <span className="text-[15px] font-semibold" style={{ color: "hsl(var(--foreground))" }}>RM {grandTotal.toFixed(2)}</span>
+                          <span className="text-[14.5px] font-semibold" style={{ color: "hsl(var(--foreground))" }}>RM {grandTotal.toFixed(2)}</span>
                         </div>
                       </div>
                     );
@@ -1266,7 +1266,7 @@ const Index = () => {
             )}
 
             {orderLines.length === 0 && (
-              <p className="text-[15px]" style={dim}>No items added yet</p>
+              <p className="text-[14.5px]" style={dim}>No items added yet</p>
             )}
           </div>
         </div>
