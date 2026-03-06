@@ -1023,6 +1023,8 @@ const Index = () => {
                   {orderLines.map((line, idx) => {
                     const siblings = products.filter(
                       s => s["PRODUCT NAME"] === line.product["PRODUCT NAME"] && s.id !== line.product.id
+                        && s["SUPPLIER"] !== line.product["SUPPLIER"]
+                        && (s["UNITS/ORDER"] ?? 1) <= 1
                     );
                     const needsChoice = siblings.length > 0 && line.supplierChoice === null;
                     const chosenSupplier = line.supplierChoice
