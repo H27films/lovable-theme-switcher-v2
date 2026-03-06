@@ -559,6 +559,11 @@ const Index = () => {
                 <div>
                   <p className="text-[10px] tracking-wider uppercase mb-1" style={dim}>Supplier Price</p>
                   <p className="text-[15px] font-light">RM {fmtPrice(selectedProduct["SUPPLIER PRICE"])}</p>
+                  {(selectedProduct["UNITS/ORDER"] ?? 1) > 1 && (
+                    <p className="text-[11px] mt-1" style={{ color: "hsl(var(--foreground))", fontWeight: 500 }}>
+                      × {selectedProduct["UNITS/ORDER"]} units/order
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-[10px] tracking-wider uppercase mb-1" style={dim}>Branch Price</p>
@@ -807,7 +812,9 @@ const Index = () => {
                             {p["COLOUR"] === true ? "Colour" : "Product"}
                           </td>
                           <td className="text-[12px] font-light py-3 pr-4 text-center" style={dim}>{p["PAR"] ?? "—"}</td>
-                          <td className="text-[12px] font-light py-3 text-center" style={dim}>{p["UNITS/ORDER"] ?? "—"}</td>
+                          <td className="text-[12px] font-light py-3 text-center" style={(p["UNITS/ORDER"] ?? 1) > 1 ? { color: "hsl(var(--foreground))", fontWeight: 500 } : dim}>
+                            {(p["UNITS/ORDER"] ?? 1) > 1 ? `${p["UNITS/ORDER"]} units` : "—"}
+                          </td>
                         </tr>
                       );
                     })}
@@ -1027,6 +1034,12 @@ const Index = () => {
                               <p className="text-[11px] mt-0.5" style={dim}>
                                 {line.product["SUPPLIER"]}
                                 {line.product["SUPPLIER PRICE"] !== null && ` · RM ${fmtPrice(line.product["SUPPLIER PRICE"])}`}
+                              </p>
+                            )}
+                            {/* Units/Order badge */}
+                            {(line.product["UNITS/ORDER"] ?? 1) > 1 && (
+                              <p className="text-[11px] mt-0.5" style={{ color: "hsl(var(--foreground))", fontWeight: 500 }}>
+                                × {line.product["UNITS/ORDER"]} units/order
                               </p>
                             )}
                           </div>
