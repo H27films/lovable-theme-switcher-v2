@@ -101,6 +101,7 @@ const Index = () => {
 
   const searchRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const supplierDropdownRef = useRef<HTMLDivElement>(null);
 
   const dim: React.CSSProperties = { color: "hsl(var(--muted-foreground))" };
   const border = "hsl(var(--border))";
@@ -328,6 +329,17 @@ const Index = () => {
       if (orderSearchRef.current && !orderSearchRef.current.contains(e.target as Node)) {
         setShowOrderDropdown(false);
         setOrderActiveIndex(-1);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Close supplier dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (supplierDropdownRef.current && !supplierDropdownRef.current.contains(e.target as Node)) {
+        setShowSupplierDropdown(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -846,8 +858,8 @@ const Index = () => {
                 onClick={() => setShowSupplierDropdown(v => !v)}
                 className="flex items-center gap-2 text-[11px] tracking-wider uppercase transition-colors px-3 py-1.5"
                 style={{
-                  border: `1px solid ${orderSupplierFilter.length > 0 ? borderActive : border}`,
-                  color: orderSupplierFilter.length > 0 ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+                  border: `1px solid ${borderActive}`,
+                  color: "hsl(var(--foreground))",
                   minWidth: "180px",
                   background: "transparent",
                 }}
@@ -868,22 +880,26 @@ const Index = () => {
                 >
                   {/* Clear all */}
                   <button
-                    className="w-full text-left px-3 py-2 text-[11px] tracking-wider uppercase transition-colors"
-                    style={{ color: orderSupplierFilter.length === 0 ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))", borderBottom: `1px solid ${border}` }}
+                    className="w-full text-left px-3 py-2 text-[11px] tracking-wider uppercase transition-colors flex items-center gap-2"
+                    style={{ color: "hsl(var(--foreground))", background: orderSupplierFilter.length === 0 ? cardBg : "transparent", borderBottom: `1px solid ${border}` }}
                     onClick={() => setOrderSupplierFilter([])}
-                  >All Suppliers</button>
+                  >
+                    <span style={{ width: 10, height: 10, border: `1px solid ${borderActive}`, display: "inline-block", background: orderSupplierFilter.length === 0 ? "hsl(var(--foreground))" : "transparent", flexShrink: 0 }} />
+                    All Suppliers
+                  </button>
                   {allSuppliers.map(s => {
-                    const selected = orderSupplierFilter.includes(s);
+                    const isAllMode = orderSupplierFilter.length === 0;
+                    const selected = isAllMode || orderSupplierFilter.includes(s);
                     return (
                       <button
                         key={s}
                         className="w-full text-left px-3 py-2 text-[11px] tracking-wider uppercase transition-colors flex items-center gap-2"
-                        style={{ color: selected ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))", background: selected ? cardBg : "transparent" }}
+                        style={{ color: "hsl(var(--foreground))", background: selected ? cardBg : "transparent" }}
                         onClick={() => setOrderSupplierFilter(prev =>
                           prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
                         )}
                       >
-                        <span style={{ width: 10, height: 10, border: `1px solid ${selected ? borderActive : border}`, display: "inline-block", background: selected ? "hsl(var(--foreground))" : "transparent", flexShrink: 0 }} />
+                        <span style={{ width: 10, height: 10, border: `1px solid ${borderActive}`, display: "inline-block", background: selected ? "hsl(var(--foreground))" : "transparent", flexShrink: 0 }} />
                         {s}
                       </button>
                     );
