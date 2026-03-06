@@ -353,6 +353,8 @@ export default function Stock() {
   const [activityRange, setActivityRange] = useState<"14" | "all">("14");
   const [dateSortAsc, setDateSortAsc] = useState(false);
   const [saveFlash, setSaveFlash] = useState(false);
+  const [usageError, setUsageError] = useState<string | null>(null);
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   const [stockSearch, setStockSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<AllFileProduct | null>(null);
@@ -490,6 +492,7 @@ export default function Stock() {
   const handleSubmit = async () => {
     const valid = entries.filter(e => e.productName && e.qty > 0);
     if (!valid.length) return;
+    setUsageError(null);
     setSubmitting(true);
     try {
       for (const entry of valid) {
@@ -498,7 +501,7 @@ export default function Stock() {
         const endingBalance = currentBalance - Number(entry.qty);
 
         // Log to AllFileLog
-        await (supabase as any).from("AllFileLog").insert({
+        const { error: logErr } = await (supabase as any).from("AllFileLog").insert({
           "DATE": getDateStr(usageDate),
           "PRODUCT NAME": entry.productName,
           "BRANCH": "Boudoir",
@@ -510,6 +513,7 @@ export default function Stock() {
           "GRN": null,
           "OFFICE BALANCE": null,
         });
+        if (logErr) { console.error("AllFileLog insert error:", logErr); setUsageError(logErr.message || "Log write failed — check console"); }
 
         // Update ALL AllFileProducts rows for this product
         await (supabase as any).from("AllFileProducts")
@@ -674,6 +678,7 @@ export default function Stock() {
   const handleOrderSubmit = async () => {
     const valid = orderEntries.filter(e => e.productName && e.qty > 0);
     if (!valid.length) return;
+    setOrderError(null);
     setOrderSubmitting(true);
 
     // Generate GRN: BOU DDMMYY based on selected date
@@ -692,7 +697,7 @@ export default function Stock() {
         const endingOfficeBalance = currentOfficeBalance - Number(entry.qty);
 
         // Log to AllFileLog
-        await (supabase as any).from("AllFileLog").insert({
+        const { error: orderLogErr } = await (supabase as any).from("AllFileLog").insert({
           "DATE": getDateStr(orderDate),
           "PRODUCT NAME": entry.productName,
           "BRANCH": "Boudoir",
@@ -704,6 +709,7 @@ export default function Stock() {
           "GRN": grn,
           "OFFICE BALANCE": endingOfficeBalance,
         });
+        if (orderLogErr) { console.error("AllFileLog order insert error:", orderLogErr); setOrderError(orderLogErr.message || "Log write failed — check console"); }
 
         // Update branch balance in AllFileProducts (ALL rows for this product)
         await (supabase as any).from("AllFileProducts")
@@ -1241,6 +1247,9 @@ export default function Stock() {
                 {submitSuccess && (
                   <p className="text-[11px] mt-3 tracking-wider" style={{ color: "hsl(var(--green))" }}>✓ Stock updated successfully</p>
                 )}
+                {usageError && (
+                  <p className="text-[11px] mt-3 tracking-wider" style={{ color: "hsl(var(--red))" }}>✗ {usageError}</p>
+                )}
               </div>
             )}
 
@@ -1322,6 +1331,9 @@ export default function Stock() {
                 </button>
                 {orderSuccess && (
                   <p className="text-[11px] mt-3 tracking-wider" style={{ color: "hsl(var(--green))" }}>✓ Order applied successfully</p>
+                )}
+                {orderError && (
+                  <p className="text-[11px] mt-3 tracking-wider" style={{ color: "hsl(var(--red))" }}>✗ {orderError}</p>
                 )}
 
                 {/* Order Summary — preview before submit */}

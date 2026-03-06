@@ -89,6 +89,7 @@ const Index = () => {
   const [showOrderPanel, setShowOrderPanel] = useState(false);
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const [orderSupplierFilter, setOrderSupplierFilter] = useState<string>("all");
   const [orderLines, setOrderLines] = useState<{ product: OfficeProduct; supplierChoice: string | null; qty: number }[]>([]);
   const [orderSearch, setOrderSearch] = useState("");
@@ -182,6 +183,7 @@ const Index = () => {
         products.filter(s => s["PRODUCT NAME"] === l.product["PRODUCT NAME"] && s.id !== l.product.id).length > 0
     );
     if (hasUnresolved) return;
+    setConfirmError(null);
     setOrderSubmitting(true);
     try {
       const today = new Date().toISOString().split("T")[0];
@@ -199,7 +201,7 @@ const Index = () => {
           .eq("PRODUCT NAME", chosenProduct["PRODUCT NAME"]);
 
         // Log to AllFileLog
-        await (supabase as any).from("AllFileLog").insert({
+        const { error: logErr } = await (supabase as any).from("AllFileLog").insert({
           "DATE": today,
           "PRODUCT NAME": chosenProduct["PRODUCT NAME"],
           "BRANCH": "Office",
@@ -211,6 +213,7 @@ const Index = () => {
           "OFFICE BALANCE": endingBalance,
           "GRN": null,
         });
+        if (logErr) { console.error("AllFileLog confirm error:", logErr); setConfirmError(logErr.message || "Log write failed — check console"); }
       }
       await fetchProducts();
       setOrderLines([]);
@@ -1014,6 +1017,9 @@ const Index = () => {
                     >
                       {orderSubmitting ? "Confirming…" : "Confirm Order"}
                     </button>
+                  )}
+                  {confirmError && (
+                    <p className="text-[11px] mt-2" style={{ color: "hsl(var(--red))" }}>✗ {confirmError}</p>
                   )}
                 </div>
               </div>
