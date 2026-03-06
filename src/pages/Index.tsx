@@ -314,15 +314,28 @@ const Index = () => {
 
   // Unique product names in order panel (after supplier filter)
   const orderDropdownResults = orderSearch.length > 0
-    ? orderPanelProducts.filter(p =>
-        p["PRODUCT NAME"]?.toLowerCase().includes(orderSearch.toLowerCase()) &&
-        !orderLines.some(l => l.product.id === p.id)
-      ).slice(0, 30)
+    ? (() => {
+        const matched = orderPanelProducts.filter(p =>
+          p["PRODUCT NAME"]?.toLowerCase().includes(orderSearch.toLowerCase()) &&
+          !orderLines.some(l => l.product["PRODUCT NAME"] === p["PRODUCT NAME"] && l.product["SUPPLIER"] === p["SUPPLIER"])
+        );
+        // Deduplicate: for same PRODUCT NAME + SUPPLIER, keep only the row with smallest UNITS/ORDER (prefer 1)
+        const seen = new Map<string, typeof matched[0]>();
+        for (const p of matched) {
+          const key = `${p["PRODUCT NAME"]}|||${p["SUPPLIER"]}`;
+          const existing = seen.get(key);
+          if (!existing || (p["UNITS/ORDER"] ?? 1) < (existing["UNITS/ORDER"] ?? 1)) {
+            seen.set(key, p);
+          }
+        }
+        return Array.from(seen.values()).slice(0, 30);
+      })()
     : [];
 
   // When adding a product to order — check if same name exists with multiple suppliers
   const addToOrder = (p: OfficeProduct) => {
-    const siblings = products.filter(s => s["PRODUCT NAME"] === p["PRODUCT NAME"] && s.id !== p.id);
+    // Only consider siblings with a DIFFERENT supplier (same supplier = different pack sizes, no choice needed)
+    const siblings = products.filter(s => s["PRODUCT NAME"] === p["PRODUCT NAME"] && s.id !== p.id && s["SUPPLIER"] !== p["SUPPLIER"]);
     setOrderLines(prev => [...prev, {
       product: p,
       supplierChoice: siblings.length > 0 ? null : p["SUPPLIER"], // null = needs supplier choice
