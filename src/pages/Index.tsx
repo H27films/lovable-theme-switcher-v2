@@ -127,6 +127,12 @@ const Index = () => {
         }
       }
       setProducts(allData);
+      // Refresh selectedProduct with latest balance if one is selected
+      setSelectedProduct(prev => {
+        if (!prev) return prev;
+        const updated = allData.find((p: any) => p.id === prev.id);
+        return updated ?? prev;
+      });
     } catch (err) {
       console.error("Error fetching products:", err);
     }
@@ -553,8 +559,8 @@ const Index = () => {
                         const label = isSupplierOrder ? (a.SUPPLIER ?? "Supplier") : (a.BRANCH ?? "Branch");
                         const qtySign = isSupplierOrder ? `+${a.QTY}` : `-${a.QTY}`;
                         const qtyColor = isSupplierOrder ? "hsl(var(--green, 142 71% 45%))" : "hsl(var(--red))";
-                        // Office Balance: use the OFFICE BALANCE snapshot from the log row
-                        const officeBalance = a["OFFICE BALANCE"] ?? "—";
+                        // Office Balance: always pull current value from AllFileProducts
+                        const officeBalance = selectedProduct["OFFICE BALANCE"] ?? "—";
                         return (
                           <tr key={i} className="border-b last:border-0" style={{ borderColor: border }}>
                             <td className="text-[12px] font-light py-2 pr-5">{fmtActivityDate(a.DATE)}</td>
