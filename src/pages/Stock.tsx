@@ -1112,10 +1112,11 @@ export default function Stock() {
                       <thead>
                         <tr className="border-b" style={{ borderColor: border }}>
                           <th className="label-uppercase font-normal text-left pb-2 pt-1">Date</th>
-                          <th className="label-uppercase font-normal text-center pb-2 pt-1">Type</th>
-                          <th className="label-uppercase font-normal text-center pb-2 pt-1">Starting Bal</th>
+                          <th className="label-uppercase font-normal text-left pb-2 pt-1">Product</th>
+                          <th className="label-uppercase font-normal text-center pb-2 pt-1">Branch</th>
+                          <th className="label-uppercase font-normal text-center pb-2 pt-1">Supplier</th>
                           <th className="label-uppercase font-normal text-center pb-2 pt-1">Qty</th>
-                          <th className="label-uppercase font-normal text-center pb-2 pt-1">Ending Bal</th>
+                          <th className="label-uppercase font-normal text-center pb-2 pt-1">Office Bal</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1124,12 +1125,13 @@ export default function Stock() {
                             <td className="text-[12px] font-light py-2" style={dim}>
                               {new Date(row.DATE).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                             </td>
-                            <td className="text-[11px] font-light py-2 text-center tracking-wider uppercase" style={dim}>{row.TYPE}</td>
-                            <td className="text-[12px] font-light py-2 text-center" style={dim}>{row["STARTING BALANCE"]}</td>
-                            <td className="text-[12px] font-light py-2 text-center" style={{ color: row.TYPE === "Order" ? "hsl(var(--green))" : "hsl(var(--red))" }}>
-                              {row.QTY}
+                            <td className="text-[12px] font-light py-2">{row["PRODUCT NAME"]}</td>
+                            <td className="text-[11px] font-light py-2 text-center tracking-wider uppercase" style={dim}>{row.BRANCH}</td>
+                            <td className="text-[11px] font-light py-2 text-center" style={dim}>{row.SUPPLIER || "—"}</td>
+                            <td className="text-[12px] font-light py-2 text-center" style={{ color: row.QTY < 0 ? "hsl(var(--red))" : "hsl(var(--green))" }}>
+                              {row.QTY > 0 ? "+" : ""}{row.QTY}
                             </td>
-                            <td className="text-[12px] font-light py-2 text-center">{row["ENDING BALANCE"]}</td>
+                            <td className="text-[12px] font-light py-2 text-center">{row["OFFICE BALANCE"] ?? "—"}</td>
                           </tr>
                         ))}
                       </tbody>
