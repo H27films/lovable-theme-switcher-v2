@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
 import ThemeToggle from "@/components/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, Home, X, ChevronLeft, ChevronRight, AlertTriangle, ChevronUp, ChevronDown, ClipboardList, Plus, Star, Search } from "lucide-react";
+import { ArrowRight, Home, X, ChevronLeft, ChevronRight, AlertTriangle, ChevronUp, ChevronDown, ClipboardList, Plus, Star, Search, Building2, RefreshCw } from "lucide-react";
 
 interface OfficeProduct {
   id: number;
@@ -84,7 +84,12 @@ const Index = () => {
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [searchHovered, setSearchHovered] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [selectedProduct, setSelectedProduct] = useState<OfficeProduct | null>(null);
+  const [filterSupplier, setFilterSupplier] = useState<string | null>(null);
+  const searchExpanded = searchHovered || searchFocused || search.length > 0 || !!filterSupplier;
   const [page, setPage] = useState(0);
   const [filterLowStock, setFilterLowStock] = useState(false);
   const [filterColour, setFilterColour] = useState<"all" | "yes" | "no">("all");
@@ -362,7 +367,8 @@ const Index = () => {
         filterColour === "all" ? true :
         filterColour === "yes" ? isColour :
         !isColour;
-      return matchSearch && matchLow && matchColour;
+      const matchSupplier = !filterSupplier || p["SUPPLIER"] === filterSupplier;
+      return matchSearch && matchLow && matchColour && matchSupplier;
     })
     .sort((a, b) => {
       const key = sortKey ?? "PRODUCT NAME";
@@ -382,6 +388,15 @@ const Index = () => {
   const pagedProducts = filteredProducts.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const lowStockCount = products.filter(p => checkBelowPar(p["OFFICE BALANCE"], p["PAR"])).length;
 
+  // Get unique matching suppliers
+  const supplierMatches = search.length > 0
+    ? Array.from(new Set(
+        products
+          .map(p => p["SUPPLIER"])
+          .filter((s): s is string => !!s && s.toLowerCase().includes(search.toLowerCase()))
+      )).sort().slice(0, 5)
+    : [];
+
   const dropdownResults = search.length > 0
     ? products
         .filter(p => p["PRODUCT NAME"]?.toLowerCase().includes(search.toLowerCase()))
@@ -397,9 +412,11 @@ const Index = () => {
         .slice(0, 30)
     : [];
 
+  const totalDropdownItems = supplierMatches.length + dropdownResults.length;
+
   const toggleFavourite = async (product: OfficeProduct) => {
     const newVal = !(product["OFFICE FAVOURITE"]);
-    await supabase
+    await (supabase as any)
       .from("AllFileProducts")
       .update({ "OFFICE FAVOURITE": newVal })
       .eq("PRODUCT NAME", product["PRODUCT NAME"]);
@@ -412,13 +429,23 @@ const Index = () => {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!showDropdown || dropdownResults.length === 0) return;
-    if (e.key === "ArrowDown") { e.preventDefault(); setActiveIndex(i => (i + 1) % dropdownResults.length); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); setActiveIndex(i => (i <= 0 ? dropdownResults.length - 1 : i - 1)); }
+    if (!showDropdown || totalDropdownItems === 0) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setActiveIndex(i => (i + 1) % totalDropdownItems); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActiveIndex(i => (i <= 0 ? totalDropdownItems - 1 : i - 1)); }
     else if (e.key === "Enter") {
       e.preventDefault();
-      const target = activeIndex >= 0 ? dropdownResults[activeIndex] : dropdownResults[0];
-      if (target) { setSelectedProduct(target); setSearch(target["PRODUCT NAME"]); setShowDropdown(false); }
+      const idx = activeIndex >= 0 ? activeIndex : 0;
+      if (idx < supplierMatches.length) {
+        // Selected a supplier
+        setFilterSupplier(supplierMatches[idx]);
+        setSearch("");
+        setSelectedProduct(null);
+        setShowDropdown(false);
+        setActiveTab("table");
+      } else {
+        const target = dropdownResults[idx - supplierMatches.length];
+        if (target) { setSelectedProduct(target); setSearch(target["PRODUCT NAME"]); setShowDropdown(false); }
+      }
     } else if (e.key === "Escape") { setShowDropdown(false); setActiveIndex(-1); }
   };
 
@@ -520,7 +547,7 @@ const Index = () => {
 
   useEffect(() => {
     if (!showNewProductModal) return;
-    supabase
+    (supabase as any)
       .from("AllFileProducts")
       .select("SUPPLIER")
       .then(({ data }) => {
@@ -549,7 +576,7 @@ const Index = () => {
     setNewProductError(null);
     try {
       // Get max id
-      const { data: maxRow } = await supabase
+      const { data: maxRow } = await (supabase as any)
         .from("AllFileProducts")
         .select("id")
         .order("id", { ascending: false })
@@ -579,11 +606,11 @@ const Index = () => {
         "CHIC NAILSPA FAVOURITE": false,
       };
 
-      const { error } = await supabase.from("AllFileProducts").insert([insertData]);
+      const { error } = await (supabase as any).from("AllFileProducts").insert([insertData]);
       if (error) throw error;
 
       // Refresh products
-      const { data: freshProducts } = await supabase.from("AllFileProducts").select("*");
+      const { data: freshProducts } = await (supabase as any).from("AllFileProducts").select("*");
       if (freshProducts) setProducts(freshProducts as OfficeProduct[]);
 
       // Reset form
@@ -663,7 +690,7 @@ const Index = () => {
         <div className="py-6">
 
           {/* ── Page header ── */}
-          <div className="mb-8">
+          <div className="mb-6">
             <div>
               <h1 className="text-[11px] font-normal tracking-[0.2em] uppercase text-dim mb-1">{new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long" })}</h1>
               <div className="flex items-end justify-between">
@@ -677,7 +704,7 @@ const Index = () => {
                 </span>
               </div>
             </div>
-            <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center justify-between mt-1">
               <p className="text-[11px] tracking-wider uppercase" style={dim}>
                 {products.length} products
               </p>
@@ -692,60 +719,112 @@ const Index = () => {
           </div>
 
           {/* ── Search bar ── */}
-          <div ref={searchRef} className="relative mb-8">
-            <div className="flex items-center gap-3 border-b pb-2" style={{ borderColor: borderActive }}>
-              <Search size={13} style={dim} />
-              <input
-                type="text"
-                className="flex-1 bg-transparent outline-none text-[15px] font-light"
-                placeholder="Search product..."
-                value={search}
-                onChange={e => { setSearch(e.target.value); setSelectedProduct(null); setShowDropdown(true); setActiveTab("table"); }}
-                onFocus={() => setShowDropdown(true)}
-                onKeyDown={handleKeyDown}
-              />
-              {search && (
-                <button onClick={() => { setSearch(""); setSelectedProduct(null); setShowDropdown(false); }} style={dim}>
+          <div
+            ref={searchRef}
+            className="relative mb-12"
+            onMouseEnter={() => setSearchHovered(true)}
+            onMouseLeave={() => setSearchHovered(false)}
+          >
+            <div
+              className="flex items-center gap-2 cursor-pointer pb-2 relative"
+              onClick={() => { setSearchFocused(true); setTimeout(() => searchInputRef.current?.focus(), 50); }}
+            >
+              <Search size={18} strokeWidth={1.5} className={`transition-colors duration-300 ${searchHovered || searchExpanded ? "text-muted-foreground" : "text-foreground"}`} />
+              {!searchExpanded && (
+                <span className={`text-[15px] font-light transition-colors duration-300 ${searchHovered ? "text-muted-foreground" : "text-foreground"}`}>Search</span>
+              )}
+              {searchExpanded && (
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  className="flex-1 bg-transparent outline-none text-[15px] font-light"
+                  placeholder="Search"
+                  value={search}
+                  onChange={e => { setSearch(e.target.value); setSelectedProduct(null); setShowDropdown(true); setActiveTab("table"); }}
+                  onFocus={() => { setSearchFocused(true); setShowDropdown(true); }}
+                  onBlur={() => setTimeout(() => { setShowDropdown(false); setSearchFocused(false); }, 150)}
+                  onKeyDown={handleKeyDown}
+                />
+              )}
+              {(search || filterSupplier) && (
+                <button onClick={(e) => { e.stopPropagation(); setSearch(""); setSelectedProduct(null); setShowDropdown(false); setFilterSupplier(null); }} style={dim}>
                   <X size={13} />
                 </button>
               )}
+              {filterSupplier && !search && (
+                <span className="text-[13px] font-light text-muted-foreground">{filterSupplier}</span>
+              )}
+              <span
+                className="absolute bottom-0 left-0 h-px transition-all duration-[600ms] ease-out"
+                style={{
+                  background: "hsl(var(--border-active))",
+                  width: searchHovered || searchExpanded ? "100%" : "0%",
+                }}
+              />
             </div>
-            {showDropdown && dropdownResults.length > 0 && (
+            {showDropdown && totalDropdownItems > 0 && (
               <div
                 ref={listRef}
                 className="absolute top-full left-0 right-0 z-50 border max-h-[240px] overflow-y-auto scrollbar-thin"
                 style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px", borderRadius: "5px" }}
               >
-                {dropdownResults.map((p, i) => (
+                {/* Supplier matches */}
+                {supplierMatches.map((supplier, i) => (
                   <div
-                    key={p.id}
+                    key={`supplier-${supplier}`}
                     data-item
                     className="flex items-center justify-between px-4 py-2.5 cursor-pointer"
                     style={{ borderBottom: `1px solid ${border}`, background: i === activeIndex ? cardBg : "transparent" }}
-                    onMouseDown={() => { setSelectedProduct(p); setSearch(p["PRODUCT NAME"]); setShowDropdown(false); }}
+                    onMouseDown={() => {
+                      setFilterSupplier(supplier);
+                      setSearch("");
+                      setSelectedProduct(null);
+                      setShowDropdown(false);
+                      setActiveTab("table");
+                    }}
                     onMouseEnter={() => setActiveIndex(i)}
                   >
-                    <div className="flex items-center gap-3">
-                      {p["OFFICE FAVOURITE"] && <Star size={10} style={{ fill: "hsl(var(--foreground))", color: "hsl(var(--foreground))" }} />}
-                      <span className="text-[13px] font-light">{p["PRODUCT NAME"]}</span>
-                      {p["SUPPLIER"] && <span className="text-[11px]" style={dim}>{p["SUPPLIER"]}</span>}
-                      {(p["COLOUR"] === true || (p["COLOUR"] as unknown as string) === "YES" || (p["COLOUR"] as unknown as string) === "yes") && (
-                        <span className="text-[10px] tracking-wider uppercase" style={dim}>Colour</span>
-                      )}
-                    </div>
                     <div className="flex items-center gap-2">
-                      {(p["UNITS/ORDER"] ?? 1) > 1 && (
-                        <span className="text-[11px]" style={dim}>{p["UNITS/ORDER"]} units</span>
-                      )}
-                      <span className="text-[12px] font-light" style={{
-                        color: checkBelowPar(p["OFFICE BALANCE"], p["PAR"])
-                          ? "hsl(var(--red))" : "hsl(var(--foreground))"
-                      }}>
-                        {p["OFFICE BALANCE"] ?? "—"}
-                      </span>
+                      <Building2 size={12} style={dim} />
+                      <span className="text-[13px] font-light">{supplier}</span>
                     </div>
+                    <span className="text-[10px] tracking-wider uppercase" style={dim}>Supplier</span>
                   </div>
                 ))}
+                {/* Product matches */}
+                {dropdownResults.map((p, i) => {
+                  const idx = supplierMatches.length + i;
+                  return (
+                    <div
+                      key={p.id}
+                      data-item
+                      className="flex items-center justify-between px-4 py-2.5 cursor-pointer"
+                      style={{ borderBottom: `1px solid ${border}`, background: idx === activeIndex ? cardBg : "transparent" }}
+                      onMouseDown={() => { setSelectedProduct(p); setSearch(p["PRODUCT NAME"]); setShowDropdown(false); setFilterSupplier(null); }}
+                      onMouseEnter={() => setActiveIndex(idx)}
+                    >
+                      <div className="flex items-center gap-3">
+                        {p["OFFICE FAVOURITE"] && <Star size={10} style={{ fill: "hsl(var(--foreground))", color: "hsl(var(--foreground))" }} />}
+                        <span className="text-[13px] font-light">{p["PRODUCT NAME"]}</span>
+                        {p["SUPPLIER"] && <span className="text-[11px]" style={dim}>{p["SUPPLIER"]}</span>}
+                        {(p["COLOUR"] === true || (p["COLOUR"] as unknown as string) === "YES" || (p["COLOUR"] as unknown as string) === "yes") && (
+                          <span className="text-[10px] tracking-wider uppercase" style={dim}>Colour</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(p["UNITS/ORDER"] ?? 1) > 1 && (
+                          <span className="text-[11px]" style={dim}>{p["UNITS/ORDER"]} units</span>
+                        )}
+                        <span className="text-[12px] font-light" style={{
+                          color: checkBelowPar(p["OFFICE BALANCE"], p["PAR"])
+                            ? "hsl(var(--red))" : "hsl(var(--foreground))"
+                        }}>
+                          {p["OFFICE BALANCE"] ?? "—"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
