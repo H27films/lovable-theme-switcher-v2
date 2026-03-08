@@ -1318,7 +1318,7 @@ export default function Stock() {
                 {/* Excel-style grid — no column-gap, border-bottom on cells 2–4 only for seamless line */}
                 <div
                   className="mb-5"
-                  style={{ display: "grid", gridTemplateColumns: "28px 1fr 70px 140px 28px", columnGap: 0 }}
+                  style={{ display: "grid", gridTemplateColumns: "20px 1fr 70px 140px 28px", columnGap: 0, marginLeft: "-4px" }}
                 >
                   {/* Header row — border-bottom only on Product, Balance, Order Qty */}
                   <div />
@@ -1340,7 +1340,7 @@ export default function Stock() {
                     return (
                       <React.Fragment key={entry.id}>
                         {/* Row number — no border */}
-                        <div className="flex items-center justify-end pr-3">
+                        <div className="flex items-center justify-start">
                           <span className="text-[13px]" style={dim}>{idx + 1}</span>
                         </div>
                         {/* Product cell — border-bottom */}
