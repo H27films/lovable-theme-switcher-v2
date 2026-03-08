@@ -1315,25 +1315,23 @@ export default function Stock() {
                   <p className="text-[11px] tracking-wider uppercase" style={dim}>Add stock from a new order</p>
                   <DatePicker value={orderDate} onChange={setOrderDate} />
                 </div>
-                {/* Excel-style grid — headers + rows share same column widths */}
+                {/* Excel-style grid — no column-gap, border-bottom on cells 2–4 only for seamless line */}
                 <div
                   className="mb-5"
-                  style={{ display: "grid", gridTemplateColumns: "20px 1fr 60px 130px 16px", columnGap: "16px" }}
+                  style={{ display: "grid", gridTemplateColumns: "28px 1fr 70px 140px 28px", columnGap: 0 }}
                 >
-                  {/* Header row */}
+                  {/* Header row — border-bottom only on Product, Balance, Order Qty */}
                   <div />
-                  <div className="pb-2">
+                  <div className="pb-2 pr-4" style={{ borderBottom: `1px solid ${borderActive}` }}>
                     <span className="text-[10px] tracking-wider uppercase" style={dim}>Product</span>
                   </div>
-                  <div className="pb-2 text-center">
+                  <div className="pb-2 px-2 text-center" style={{ borderBottom: `1px solid ${borderActive}` }}>
                     <span className="text-[10px] tracking-wider uppercase" style={dim}>Balance</span>
                   </div>
-                  <div className="pb-2 text-center">
+                  <div className="pb-2 px-2 text-center" style={{ borderBottom: `1px solid ${borderActive}` }}>
                     <span className="text-[10px] tracking-wider uppercase" style={dim}>Order Qty</span>
                   </div>
                   <div />
-                  {/* Header divider — columns 2–4 only (no line under number or × column) */}
-                  <div style={{ gridColumn: "2 / 5", borderBottom: `1px solid ${borderActive}`, height: 0 }} />
 
                   {/* Data rows */}
                   {orderEntries.map((entry, idx) => {
@@ -1341,12 +1339,12 @@ export default function Stock() {
                     const currentBal = product?.["BOUDOIR BALANCE"] ?? null;
                     return (
                       <React.Fragment key={entry.id}>
-                        {/* Row number */}
-                        <div className="flex items-center justify-end">
+                        {/* Row number — no border */}
+                        <div className="flex items-center justify-end pr-3">
                           <span className="text-[13px]" style={dim}>{idx + 1}</span>
                         </div>
-                        {/* Product cell */}
-                        <div>
+                        {/* Product cell — border-bottom */}
+                        <div className="pr-4" style={{ borderBottom: `1px solid ${border}` }}>
                           <ProductDropdown
                             entry={entry}
                             sortedProducts={sortedProducts}
@@ -1361,14 +1359,14 @@ export default function Stock() {
                             lineStyle
                           />
                         </div>
-                        {/* Balance cell */}
-                        <div className="flex items-center justify-center">
+                        {/* Balance cell — border-bottom */}
+                        <div className="flex items-center justify-center px-2" style={{ borderBottom: `1px solid ${border}` }}>
                           <span className="text-[13px] font-light" style={currentBal === null ? dim : { color: "hsl(var(--foreground))" }}>
                             {currentBal === null ? "—" : currentBal}
                           </span>
                         </div>
-                        {/* Qty stepper cell */}
-                        <div className="flex items-center justify-between py-1">
+                        {/* Qty stepper cell — border-bottom */}
+                        <div className="flex items-center justify-between py-1 px-2" style={{ borderBottom: `1px solid ${border}` }}>
                           <button
                             onClick={() => updateOrderEntry(entry.id, { qty: Math.max(1, entry.qty - 1) })}
                             className="px-1.5 py-1 transition-colors" style={dim}
@@ -1385,16 +1383,14 @@ export default function Stock() {
                             <ChevronRight size={13} />
                           </button>
                         </div>
-                        {/* Remove button */}
-                        <div className="flex items-center justify-center">
+                        {/* Remove button — no border */}
+                        <div className="flex items-center justify-center pl-2">
                           <button onClick={() => removeOrderEntry(entry.id)} className="transition-colors" style={dim}
                             onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
                             onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
                             <X size={13} />
                           </button>
                         </div>
-                        {/* Row divider — columns 2–4 only (no line under row number or × button) */}
-                        <div style={{ gridColumn: "2 / 5", borderBottom: `1px solid ${border}`, height: 0 }} />
                       </React.Fragment>
                     );
                   })}
