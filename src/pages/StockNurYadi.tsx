@@ -1028,10 +1028,8 @@ function StockNurYadiInner() {
             <div className="mb-6">
               <div className="flex items-end justify-between">
                 <div>
-                <h1 className="text-[11px] font-normal tracking-[0.2em] uppercase text-dim mb-1">Nur Yadi Stock</h1>
-                  <p className="text-[28px] font-light tracking-tight">
-                    {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
-                  </p>
+                <h1 className="text-[11px] font-normal tracking-[0.2em] uppercase text-dim mb-1">{new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</h1>
+                  <p className="text-[28px] font-light tracking-tight">Nur Yadi</p>
                 </div>
                 <span
                   className="nav-link mb-1"
@@ -1042,7 +1040,7 @@ function StockNurYadiInner() {
                 </span>
               </div>
               <div className="flex items-center justify-between mt-1">
-                <p className="text-[11px] tracking-wider uppercase" style={dim}>{products.length} products · Nur Yadi</p>
+                <p className="text-[11px] tracking-wider uppercase" style={dim}>{products.length} products</p>
                 {mode === "order" && (
                   <span
                     className="nav-link relative"
