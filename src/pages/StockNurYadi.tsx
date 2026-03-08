@@ -720,7 +720,7 @@ function StockNurYadiInner() {
     const dd = String(orderDateObj.getDate()).padStart(2, "0");
     const mm = String(orderDateObj.getMonth() + 1).padStart(2, "0");
     const yy = String(orderDateObj.getFullYear()).slice(-2);
-    const grn = `NY ${dd}${mm}${yy}`;
+    const grn = `NUR ${dd}${mm}${yy}`;
 
     if (orderConfirmMode) {
       // V2: build pending order
