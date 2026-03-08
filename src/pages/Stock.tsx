@@ -357,6 +357,7 @@ function StockInner() {
   const [orderEntries, setOrderEntries] = useState<OrderLine[]>(makeOrderEntries());
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [reversing, setReversing] = useState<number | null>(null);
   const [showOrderSummaryPanel, setShowOrderSummaryPanel] = useState(false);
   const [grnNotes, setGrnNotes] = useState("");
@@ -736,6 +737,14 @@ function StockInner() {
     });
 
     setPendingOrder({ grn, date: getDateStr(orderDate), entries });
+    setOrderSubmitted(true);
+  };
+
+  const handleResetOrder = () => {
+    setPendingOrder(null);
+    setOrderEntries(makeOrderEntries());
+    setOrderSubmitted(false);
+    setOrderError(null);
   };
 
   const handleInlineConfirmOrder = async () => {
@@ -829,6 +838,7 @@ function StockInner() {
       await fetchLog();
       setOrderEntries(makeOrderEntries());
       setPendingOrder(null);
+      setOrderSubmitted(false);
       setOrderSuccess(true);
       setTimeout(() => setOrderSuccess(false), 3000);
     } catch (err) { console.error("Confirm order error:", err); }
@@ -1499,8 +1509,11 @@ function StockInner() {
                 <button onClick={handleOrderSubmit} disabled={orderSubmitting} className="minimal-btn" style={{ opacity: orderSubmitting ? 0.5 : 1, borderRadius: "5px" }}>
                   {orderSubmitting ? "Saving..." : "Submit Order"}
                 </button>
+                {orderSubmitted && !orderSuccess && (
+                  <p className="text-[11px] mt-3 tracking-wider" style={{ color: "hsl(var(--green))" }}>✓ Order submitted</p>
+                )}
                 {orderSuccess && (
-                  <p className="text-[11px] mt-3 tracking-wider" style={{ color: "hsl(var(--green))" }}>✓ Order applied successfully</p>
+                  <p className="text-[11px] mt-3 tracking-wider" style={{ color: "hsl(var(--green))" }}>✓ Order confirmed</p>
                 )}
                 {orderError && (
                   <p className="text-[11px] mt-3 tracking-wider" style={{ color: "hsl(var(--red))" }}>✗ {orderError}</p>
@@ -1511,7 +1524,7 @@ function StockInner() {
                   <div className="mt-10">
                     <div className="mb-5">
                       <h2 className="text-[22px] font-light tracking-tight">Order Summary</h2>
-                      <p className="text-[11px] tracking-wider uppercase mt-1" style={dim}>Preview · Click × to remove · Submit Order to confirm</p>
+                      <p className="text-[11px] tracking-wider uppercase mt-1" style={dim}>{pendingOrder ? "Pending · Click × to remove" : "Preview · Click × to remove · Submit Order to confirm"}</p>
                     </div>
                     <table className="w-full border-collapse">
                       <thead>
@@ -1532,7 +1545,15 @@ function StockInner() {
                             <td className="text-[13px] font-light py-3 text-center">{row.ending}</td>
                             <td className="py-3 text-center">
                               <button
-                                onClick={() => setOrderEntries(prev => prev.filter(e => e.productName !== row.productName))}
+                                onClick={() => {
+                                  setOrderEntries(prev => prev.map(e => e.productName === row.productName ? { ...e, productName: "", qty: 0 } : e));
+                                  setPendingOrder(prev => {
+                                    if (!prev) return prev;
+                                    const entries = prev.entries.filter(e => e.productName !== row.productName);
+                                    if (!entries.length) { setOrderSubmitted(false); return null; }
+                                    return { ...prev, entries };
+                                  });
+                                }}
                                 style={{ color: "hsl(var(--muted-foreground))" }}
                                 onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
                                 onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
@@ -2065,11 +2086,16 @@ function StockInner() {
                           <td className="text-[13px] font-light py-3 text-center" style={isEditing ? dim : {}}>{previewBal}</td>
                           <td className="py-3 text-center">
                             <button
-                              onClick={() => setPendingOrder(prev => {
-                                if (!prev) return prev;
-                                const entries = prev.entries.filter((_, i) => i !== idx);
-                                return entries.length ? { ...prev, entries } : null;
-                              })}
+                              onClick={() => {
+                                const productName = entry.productName;
+                                setPendingOrder(prev => {
+                                  if (!prev) return prev;
+                                  const entries = prev.entries.filter((_, i) => i !== idx);
+                                  if (!entries.length) { setOrderSubmitted(false); return null; }
+                                  return { ...prev, entries };
+                                });
+                                setOrderEntries(prev => prev.map(e => e.productName === productName ? { ...e, productName: "", qty: 0 } : e));
+                              }}
                               style={dim}
                               onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
                               onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
@@ -2121,6 +2147,15 @@ function StockInner() {
                     style={{ background: "hsl(var(--foreground))", color: "hsl(var(--background))", padding: "6px 12px", borderRadius: "5px", opacity: orderConfirming ? 0.5 : 1 }}
                   >
                     {orderConfirming ? "Confirming..." : "Confirm Order"}
+                  </button>
+                  <button
+                    onClick={handleResetOrder}
+                    className="flex items-center gap-2 text-[11px] tracking-wider uppercase transition-colors"
+                    style={{ color: "hsl(var(--muted-foreground))" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                  >
+                    Reset
                   </button>
                 </div>
               </>
