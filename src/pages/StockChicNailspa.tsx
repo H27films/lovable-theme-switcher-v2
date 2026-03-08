@@ -882,6 +882,7 @@ function StockChicNailspaInner() {
     const margin = 50;
 
     const grnNumber = (() => {
+      if (pendingOrder?.grn) return pendingOrder.grn;
       const found = allTodayOrders.find((r: LogRow) => r.GRN);
       if (found) return found.GRN as string;
       const d = new Date();
@@ -967,17 +968,18 @@ function StockChicNailspaInner() {
     doc.text("ENDING", endCX, tableTop + 5, { align: "center" });
     doc.text("BALANCE", endCX, tableTop - 5, { align: "center" });
 
-    // Rows — sorted alphabetically
-    const sortedOrders = [...allTodayOrders].sort((a, b) =>
-      a["PRODUCT NAME"].localeCompare(b["PRODUCT NAME"])
-    );
+    // Rows — use pendingOrder if available, else allTodayOrders
+    type PdfRow = { name: string; starting: number; qty: number; ending: number };
+    const pdfRows: PdfRow[] = pendingOrder
+      ? [...pendingOrder.entries].sort((a, b) => a.productName.localeCompare(b.productName)).map(e => ({ name: e.productName, starting: e.starting, qty: e.qty, ending: e.ending }))
+      : [...allTodayOrders].sort((a, b) => a["PRODUCT NAME"].localeCompare(b["PRODUCT NAME"])).map(r => ({ name: r["PRODUCT NAME"], starting: r["STARTING BALANCE"], qty: r.QTY, ending: r["ENDING BALANCE"] }));
 
     const rowH = 26;
     let y = tableTop + 16;
     let totalQty = 0;
 
-    sortedOrders.forEach((row, idx) => {
-      totalQty += row.QTY;
+    pdfRows.forEach((row, idx) => {
+      totalQty += row.qty;
       if (idx % 2 === 0) {
         doc.setFillColor(250, 250, 250);
         doc.rect(margin, y - 2, W - 2 * margin, rowH, "F");
@@ -996,10 +998,10 @@ function StockChicNailspaInner() {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9.5);
       doc.setTextColor(38, 38, 38);
-      doc.text(row["PRODUCT NAME"], nameX, y + 14);
-      doc.text(String(row["STARTING BALANCE"]), oldCX, y + 14, { align: "center" });
-      doc.text(String(row.QTY), qtyCX, y + 14, { align: "center" });
-      doc.text(String(row["ENDING BALANCE"]), endCX, y + 14, { align: "center" });
+      doc.text(row.name, nameX, y + 14);
+      doc.text(String(row.starting), oldCX, y + 14, { align: "center" });
+      doc.text(String(row.qty), qtyCX, y + 14, { align: "center" });
+      doc.text(String(row.ending), endCX, y + 14, { align: "center" });
       y += rowH;
     });
 
@@ -1041,7 +1043,9 @@ function StockChicNailspaInner() {
   const exportToExcel = () => {
     const rows = [
       ["Product Name", "Starting Balance", "Order Qty", "Ending Balance"],
-      ...allTodayOrders.map(r => [r["PRODUCT NAME"], r["STARTING BALANCE"], r.QTY, r["ENDING BALANCE"]])
+      ...(pendingOrder
+        ? pendingOrder.entries.map(e => [e.productName, e.starting, e.qty, e.ending])
+        : allTodayOrders.map(r => [r["PRODUCT NAME"], r["STARTING BALANCE"], r.QTY, r["ENDING BALANCE"]]))
     ];
     const csv = rows.map(r => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -2063,25 +2067,61 @@ function StockChicNailspaInner() {
                     })}
                   </tbody>
                 </table>
-                {/* Confirm + Reset buttons */}
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleConfirmOrder}
-                    disabled={orderConfirming}
-                    className="text-[11px] tracking-wider uppercase transition-colors"
-                    style={{ background: "hsl(var(--foreground))", color: "hsl(var(--background))", padding: "6px 12px", borderRadius: "5px", opacity: orderConfirming ? 0.5 : 1 }}
-                  >
-                    {orderConfirming ? "Confirming..." : "Confirm Order"}
-                  </button>
-                  <button
-                    onClick={handleResetOrder}
-                    className="text-[11px] tracking-wider uppercase transition-colors"
-                    style={{ color: "hsl(var(--muted-foreground))" }}
-                    onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
-                    onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
-                  >
-                    Reset
-                  </button>
+                {/* Notes */}
+                <div className="mb-6 mt-2">
+                  <p className="text-[10px] tracking-wider uppercase mb-2" style={{ color: "hsl(var(--muted-foreground))" }}>Add Notes</p>
+                  <textarea
+                    rows={3}
+                    className="w-full bg-transparent outline-none text-[13px] font-light resize-none"
+                    style={{ borderBottom: "1px solid hsl(var(--border-active))", padding: "6px 0", color: "hsl(var(--foreground))" }}
+                    placeholder="Example: No Argan Stock..."
+                    value={grnNotes}
+                    onChange={e => setGrnNotes(e.target.value)}
+                  />
+                </div>
+                {/* Confirm + Reset + GRN + Export buttons */}
+                <div className="flex flex-col gap-3 mb-12">
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={handleConfirmOrder}
+                      disabled={orderConfirming}
+                      className="text-[11px] tracking-wider uppercase transition-colors"
+                      style={{ background: "hsl(var(--foreground))", color: "hsl(var(--background))", padding: "6px 12px", borderRadius: "5px", opacity: orderConfirming ? 0.5 : 1 }}
+                    >
+                      {orderConfirming ? "Confirming..." : "Confirm Order"}
+                    </button>
+                    <button
+                      onClick={handleResetOrder}
+                      className="text-[11px] tracking-wider uppercase transition-colors"
+                      style={{ color: "hsl(var(--muted-foreground))" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                    >
+                      Reset
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <button
+                      onClick={generateGRNPdf}
+                      className="flex items-center gap-2 text-[11px] tracking-wider uppercase transition-colors"
+                      style={{ color: "hsl(var(--muted-foreground))" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                    >
+                      <FileText size={12} />
+                      GRN
+                    </button>
+                    <button
+                      onClick={exportToExcel}
+                      className="flex items-center gap-2 text-[11px] tracking-wider uppercase transition-colors"
+                      style={{ color: "hsl(var(--muted-foreground))" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                    >
+                      <Download size={12} />
+                      Export to Excel
+                    </button>
+                  </div>
                 </div>
                 {orderError && (
                   <p className="text-[11px] mt-3 tracking-wider" style={{ color: "hsl(var(--red))" }}>✗ {orderError}</p>
