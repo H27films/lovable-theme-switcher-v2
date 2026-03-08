@@ -1318,20 +1318,21 @@ export default function Stock() {
                 {/* Excel-style grid — headers + rows share same column widths */}
                 <div
                   className="mb-5"
-                  style={{ display: "grid", gridTemplateColumns: "20px 1fr 60px 130px 16px", columnGap: "16px" }}
+                  style={{ display: "grid", gridTemplateColumns: "20px 1fr 60px 130px", columnGap: "16px" }}
                 >
                   {/* Header row */}
                   <div />
-                  <div className="pb-2" style={{ borderBottom: `1px solid ${borderActive}` }}>
+                  <div className="pb-2">
                     <span className="text-[10px] tracking-wider uppercase" style={dim}>Product</span>
                   </div>
-                  <div className="pb-2 text-center" style={{ borderBottom: `1px solid ${borderActive}` }}>
+                  <div className="pb-2 text-center">
                     <span className="text-[10px] tracking-wider uppercase" style={dim}>Balance</span>
                   </div>
-                  <div className="pb-2 text-center" style={{ borderBottom: `1px solid ${borderActive}` }}>
+                  <div className="pb-2 text-center">
                     <span className="text-[10px] tracking-wider uppercase" style={dim}>Order Qty</span>
                   </div>
-                  <div />
+                  {/* Header divider — columns 2–4 only */}
+                  <div style={{ gridColumn: "2 / -1", borderBottom: `1px solid ${borderActive}`, height: 0 }} />
 
                   {/* Data rows */}
                   {orderEntries.map((entry, idx) => {
@@ -1383,16 +1384,8 @@ export default function Stock() {
                             <ChevronRight size={13} />
                           </button>
                         </div>
-                        {/* Remove button */}
-                        <div className="flex items-center justify-center">
-                          <button onClick={() => removeOrderEntry(entry.id)} className="transition-colors" style={dim}
-                            onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
-                            onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
-                            <X size={13} />
-                          </button>
-                        </div>
-                        {/* Full-width row divider spanning all 5 columns */}
-                        <div style={{ gridColumn: "1 / -1", borderBottom: `1px solid ${border}`, height: 0 }} />
+                        {/* Row divider — columns 2–4 only (Product → Order Qty, no line under number) */}
+                        <div style={{ gridColumn: "2 / -1", borderBottom: `1px solid ${border}`, height: 0 }} />
                       </React.Fragment>
                     );
                   })}
