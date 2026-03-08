@@ -1680,7 +1680,7 @@ function StockNurYadiInner() {
                                 {isExpanded && rows.map((row, ri) => (
                                   <tr key={row.id} className="table-row-hover" style={{ borderBottom: `1px solid ${ri === rows.length - 1 ? (isLast ? border : "hsl(var(--foreground))") : border}`, background: "hsl(var(--card))" }}>
                                     <td className="text-[12px] font-light py-2.5 pl-2" style={dim}>—</td>
-                                    <td className="text-[13px] font-light py-2.5">{row["PRODUCT NAME"]}</td>
+                                    <td className="text-[13px] font-light py-2.5 text-center">{row["PRODUCT NAME"]}</td>
                                     <td className="text-[13px] font-light py-2.5 text-center" style={dim}>{row["STARTING BALANCE"]}</td>
                                     <td className="text-[13px] font-light py-2.5 text-center" style={{ color: "hsl(var(--green))" }}>{row.QTY > 0 ? "+" : ""}{row.QTY}</td>
                                     <td className="text-[13px] font-light py-2.5 text-center">{row["ENDING BALANCE"]}</td>
@@ -2127,7 +2127,7 @@ function StockNurYadiInner() {
                       <th className="label-uppercase font-normal text-left pb-3 pt-2">Date</th>
                       <th className="label-uppercase font-normal text-center pb-3 pt-2">GRN</th>
                       <th className="label-uppercase font-normal text-center pb-3 pt-2">Items</th>
-                      <th className="w-8" />
+                      <th className="w-8 label-uppercase font-normal text-center pb-3 pt-2">{expandedGRNs.size > 0 ? "BAL" : ""}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2153,7 +2153,7 @@ function StockNurYadiInner() {
                         {expandedGRNs.has(group.key) && group.rows.map((row, ri) => (
                           <tr key={row.id} className="border-b" style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}>
                             <td className="text-[12px] font-light py-2.5 pl-2" style={dim}>—</td>
-                            <td className="text-[13px] font-light py-2.5">{row["PRODUCT NAME"]}</td>
+                            <td className="text-[13px] font-light py-2.5 text-center">{row["PRODUCT NAME"]}</td>
                             <td className="text-[12px] font-light py-2.5 text-center" style={{ color: "hsl(var(--green))" }}>+{row.QTY}</td>
                             <td className="text-[12px] font-light py-2.5 text-center" style={dim}>{row["ENDING BALANCE"]}</td>
                           </tr>
