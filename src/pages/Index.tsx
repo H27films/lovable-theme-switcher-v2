@@ -668,20 +668,20 @@ const Index = () => {
                 <h1 className="text-[11px] font-normal tracking-[0.2em] uppercase text-dim mb-1">Office Database</h1>
                 <p className="text-[28px] font-light tracking-tight">Stock Inventory</p>
               </div>
-              <div className="flex flex-col items-end gap-1 mb-1">
-                <span
-                  className="nav-link flex items-center gap-0.5"
-                  style={{ color: "hsl(var(--foreground))" }}
-                  onClick={() => setShowNewProductModal(true)}
-                >
-                  New Product <Plus size={13} className="inline -mt-0.5" />
-                </span>
+              <div className="flex flex-col items-end gap-1">
                 <span
                   className="nav-link flex items-center gap-0.5"
                   style={{ color: "hsl(var(--foreground))" }}
                   onClick={() => { setShowOrderPanel(true); setOrderSearch(""); setShowSupplierDropdown(false); }}
                 >
                   Order <ClipboardList size={13} className="inline -mt-0.5" />
+                </span>
+                <span
+                  className="nav-link flex items-center gap-0.5"
+                  style={{ color: "hsl(var(--foreground))" }}
+                  onClick={() => setShowNewProductModal(true)}
+                >
+                  New Product <Plus size={13} className="inline -mt-0.5" />
                 </span>
               </div>
             </div>
