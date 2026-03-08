@@ -1030,7 +1030,7 @@ function StockChicNailspaInner() {
               <div className="flex items-end justify-between">
                 <div>
                 <h1 className="text-[11px] font-normal tracking-[0.2em] uppercase text-dim mb-1">{new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long" })}</h1>
-                  <p className="text-[28px] font-light tracking-tight">Chic Nailspa</p>
+                  <p className="text-[28px] font-light tracking-tight uppercase">Chic Nailspa</p>
                 </div>
                 <span
                   className="nav-link mb-1"
