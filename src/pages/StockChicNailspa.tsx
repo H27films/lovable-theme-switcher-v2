@@ -367,6 +367,8 @@ function StockChicNailspaInner() {
   const [activityRange, setActivityRange] = useState<"14" | "all">("14");
   const [dateSortAsc, setDateSortAsc] = useState(false);
   const [saveFlash, setSaveFlash] = useState(false);
+  const [usageError, setUsageError] = useState<string | null>(null);
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   const [stockSearch, setStockSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<AllFileProduct | null>(null);
