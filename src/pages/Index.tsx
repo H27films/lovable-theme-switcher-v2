@@ -672,16 +672,16 @@ const Index = () => {
                 <span
                   className="nav-link flex items-center gap-0.5"
                   style={{ color: "hsl(var(--foreground))" }}
-                  onClick={() => { setShowOrderPanel(true); setOrderSearch(""); setShowSupplierDropdown(false); }}
+                  onClick={() => setShowNewProductModal(true)}
                 >
-                  Order <ClipboardList size={13} className="inline -mt-0.5" />
+                  New Product <Plus size={13} className="inline -mt-0.5" />
                 </span>
                 <span
                   className="nav-link flex items-center gap-0.5"
                   style={{ color: "hsl(var(--foreground))" }}
-                  onClick={() => setShowNewProductModal(true)}
+                  onClick={() => { setShowOrderPanel(true); setOrderSearch(""); setShowSupplierDropdown(false); }}
                 >
-                  New Product <Plus size={13} className="inline -mt-0.5" />
+                  Order <ClipboardList size={13} className="inline -mt-0.5" />
                 </span>
               </div>
             </div>
