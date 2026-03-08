@@ -68,7 +68,7 @@ const makeOrderEntries = (): OrderLine[] => [1,2,3,4,5].map(id => ({
   id, productName: "", qty: 1, showProductDropdown: false, productSearch: "",
 }));
 
-function ProductDropdown({ entry, sortedProducts, onSelect, onSearch, onToggle, onClose, showBalance }: {
+function ProductDropdown({ entry, sortedProducts, onSelect, onSearch, onToggle, onClose, showBalance, lineStyle }: {
   entry: { productName: string; showProductDropdown: boolean; productSearch: string };
   sortedProducts: AllFileProduct[];
   onSelect: (name: string) => void;
