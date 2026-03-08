@@ -659,7 +659,7 @@ const Index = () => {
           </div>
         </div>
 
-        <div className="py-12">
+        <div className="py-6">
 
           {/* ── Page header ── */}
           <div className="mb-8">

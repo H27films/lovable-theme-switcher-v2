@@ -1024,7 +1024,7 @@ export default function Stock() {
           </button>
         </div>
 
-        <div className="py-12">
+        <div className="py-6">
 
           {/* ── SECTION 1: Current Stock ── */}
           <div className="mb-12">
