@@ -144,7 +144,7 @@ function ProductDropdown({ entry, sortedProducts, onSelect, onSearch, onToggle, 
         style={lineStyle ? {} : { background: cardBg, border: `1px solid ${borderActive}` }}
         onClick={onToggle}
       >
-        <span className="text-[13px] font-light" style={{ color: entry.productName ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))" }}>
+        <span className="text-[13px] font-light" style={{ color: "hsl(var(--foreground))" }}>
           {entry.productName || "Select product..."}
         </span>
         <ChevronDown size={12} style={dim} />
