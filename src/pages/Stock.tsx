@@ -310,7 +310,7 @@ function DatePicker({ value, onChange }: {
       <button
         onClick={() => setOpen(o => !o)}
         className="flex items-center gap-1.5 h-[28px] px-3 text-[11px] tracking-wider uppercase transition-colors"
-        style={{ border: `1px solid ${value !== "today" ? borderActive : border}`, background: cardBg, color: value !== "today" ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))" }}
+        style={{ border: `1px solid ${value !== "today" ? borderActive : border}`, background: cardBg, color: value !== "today" ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))", borderRadius: "5px" }}
       >
         {OPTIONS.find(o => o.value === value)?.label}
         <ChevronDown size={10} />
@@ -318,7 +318,7 @@ function DatePicker({ value, onChange }: {
       {open && (
         <div
           className="absolute top-full right-0 z-50 border mt-0.5"
-          style={{ background: "hsl(var(--popover))", borderColor: borderActive, minWidth: "110px" }}
+          style={{ background: "hsl(var(--popover))", borderColor: borderActive, minWidth: "110px", borderRadius: "5px" }}
         >
           {OPTIONS.map(opt => (
             <div
@@ -1325,7 +1325,7 @@ function StockInner() {
                   onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
                   <Plus size={11} /> Add another product
                 </button>
-                <button onClick={handleSubmit} disabled={submitting} className="minimal-btn" style={{ background: "hsl(var(--foreground))", color: "hsl(var(--background))", opacity: submitting ? 0.5 : 1 }}>
+                <button onClick={handleSubmit} disabled={submitting} className="minimal-btn" style={{ opacity: submitting ? 0.5 : 1 }}>
                   {submitting ? "Saving..." : "Submit"}
                 </button>
                 {submitSuccess && (
@@ -1430,7 +1430,7 @@ function StockInner() {
                   onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
                   <Plus size={11} /> Add another product
                 </button>
-                <button onClick={handleOrderSubmit} disabled={orderSubmitting} className="minimal-btn" style={{ background: "hsl(var(--foreground))", color: "hsl(var(--background))", opacity: orderSubmitting ? 0.5 : 1 }}>
+                <button onClick={handleOrderSubmit} disabled={orderSubmitting} className="minimal-btn" style={{ opacity: orderSubmitting ? 0.5 : 1 }}>
                   {orderSubmitting ? "Saving..." : "Submit Order"}
                 </button>
                 {orderSuccess && (
