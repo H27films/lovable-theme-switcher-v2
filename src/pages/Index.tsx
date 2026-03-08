@@ -798,15 +798,17 @@ const Index = () => {
                     <button
                       key={branch}
                       onClick={() => { setSelectedBranch(branch); setExpandedBranchDates(new Set()); setExpandedGRNs(new Set()); setSelectedBranchProduct(null); }}
-                      className="text-[13px] tracking-[0.12em] uppercase pb-2 transition-colors relative"
-                      style={{ color: selectedBranch === branch ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))" }}
-                      onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
-                      onMouseLeave={e => (e.currentTarget.style.color = selectedBranch === branch ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))")}
+                      className="transition-all duration-200"
+                      style={{
+                        fontSize: selectedBranch === branch ? "22px" : "18px",
+                        fontWeight: 300,
+                        letterSpacing: "-0.02em",
+                        color: selectedBranch === branch ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+                      }}
+                      onMouseEnter={e => { if (selectedBranch !== branch) { e.currentTarget.style.color = "hsl(var(--foreground))"; e.currentTarget.style.fontSize = "20px"; } }}
+                      onMouseLeave={e => { if (selectedBranch !== branch) { e.currentTarget.style.color = "hsl(var(--muted-foreground))"; e.currentTarget.style.fontSize = "18px"; } }}
                     >
                       {branch}
-                      {selectedBranch === branch && (
-                        <span className="absolute bottom-0 left-0 right-0 h-[1px]" style={{ background: "hsl(var(--foreground))" }} />
-                      )}
                     </button>
                   ))}
                 </div>
