@@ -663,21 +663,12 @@ const Index = () => {
 
           {/* ── Page header ── */}
           <div className="mb-8">
-            <div className="flex items-end justify-between">
-              <div>
-                <h1 className="text-[11px] font-normal tracking-[0.2em] uppercase text-dim mb-1">Office Database</h1>
+            <div>
+              <h1 className="text-[11px] font-normal tracking-[0.2em] uppercase text-dim mb-1">Office Database</h1>
+              <div className="flex items-end justify-between">
                 <p className="text-[28px] font-light tracking-tight">Stock Inventory</p>
-              </div>
-              <div className="flex flex-col items-end gap-1">
                 <span
-                  className="nav-link flex items-center gap-0.5"
-                  style={{ color: "hsl(var(--foreground))" }}
-                  onClick={() => { setShowOrderPanel(true); setOrderSearch(""); setShowSupplierDropdown(false); }}
-                >
-                  Order <ClipboardList size={13} className="inline -mt-0.5" />
-                </span>
-                <span
-                  className="nav-link flex items-center gap-0.5"
+                  className="nav-link flex items-center gap-0.5 mb-1"
                   style={{ color: "hsl(var(--foreground))" }}
                   onClick={() => setShowNewProductModal(true)}
                 >
@@ -685,11 +676,17 @@ const Index = () => {
                 </span>
               </div>
             </div>
-            <div className="flex items-center justify-between mt-1">
+            <div className="flex items-center justify-between mt-2">
               <p className="text-[11px] tracking-wider uppercase" style={dim}>
                 {products.length} products
               </p>
-
+              <span
+                className="nav-link flex items-center gap-0.5"
+                style={{ color: "hsl(var(--foreground))" }}
+                onClick={() => { setShowOrderPanel(true); setOrderSearch(""); setShowSupplierDropdown(false); }}
+              >
+                Order <ClipboardList size={13} className="inline -mt-0.5" />
+              </span>
             </div>
           </div>
 
