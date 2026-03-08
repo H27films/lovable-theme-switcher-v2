@@ -1086,7 +1086,7 @@ function StockInner() {
                 <div
                   ref={stockListRef}
                   className="absolute top-full left-0 right-0 z-50 border max-h-[220px] overflow-y-auto scrollbar-thin"
-                  style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px" }}
+                  style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px", borderRadius: "5px" }}
                 >
                   {filteredStockProducts.map((row, i) => (
                     <div key={row["PRODUCT NAME"]}
@@ -1117,7 +1117,7 @@ function StockInner() {
                 return `RM ${val.toFixed(2)}`;
               };
               return (
-                <div className="surface-box p-6">
+                <div className="surface-box p-6" style={{ borderRadius: "5px" }}>
                   {/* Balance row */}
                   <div className="flex items-center justify-between mb-6">
                     <div>
@@ -1325,7 +1325,7 @@ function StockInner() {
                   onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
                   <Plus size={11} /> Add another product
                 </button>
-                <button onClick={handleSubmit} disabled={submitting} className="minimal-btn" style={{ opacity: submitting ? 0.5 : 1 }}>
+                <button onClick={handleSubmit} disabled={submitting} className="minimal-btn" style={{ opacity: submitting ? 0.5 : 1, borderRadius: "5px" }}>
                   {submitting ? "Saving..." : "Submit"}
                 </button>
                 {submitSuccess && (
@@ -1430,7 +1430,7 @@ function StockInner() {
                   onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
                   <Plus size={11} /> Add another product
                 </button>
-                <button onClick={handleOrderSubmit} disabled={orderSubmitting} className="minimal-btn" style={{ opacity: orderSubmitting ? 0.5 : 1 }}>
+                <button onClick={handleOrderSubmit} disabled={orderSubmitting} className="minimal-btn" style={{ opacity: orderSubmitting ? 0.5 : 1, borderRadius: "5px" }}>
                   {orderSubmitting ? "Saving..." : "Submit Order"}
                 </button>
                 {orderSuccess && (
