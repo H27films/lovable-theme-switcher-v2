@@ -720,6 +720,22 @@ function StockInner() {
     const valid = orderEntries.filter(e => e.productName && e.qty > 0);
     if (!valid.length) return;
     setOrderError(null);
+
+    const orderDateObj = new Date(getDateStr(orderDate));
+    const dd = String(orderDateObj.getDate()).padStart(2, "0");
+    const mm = String(orderDateObj.getMonth() + 1).padStart(2, "0");
+    const yy = String(orderDateObj.getFullYear()).slice(-2);
+    const grn = `BOU ${dd}${mm}${yy}`;
+
+    const entries = valid.map(entry => {
+      const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
+      const starting = Number(product?.["BOUDOIR BALANCE"] ?? 0);
+      const qty = Number(entry.qty);
+      const ending = starting + qty;
+      return { productName: entry.productName, starting, qty, ending };
+    });
+
+    setPendingOrder({ grn, date: getDateStr(orderDate), entries });
   };
 
   const handleInlineConfirmOrder = async () => {
@@ -829,7 +845,7 @@ function StockInner() {
   const latestOrderDate = allOrderDates[0] ?? today;
   const todayOrders = log.filter(r => r.TYPE === "Order" && r.DATE === latestOrderDate);
   const allTodayOrders = log.filter(r => r.TYPE === "Order" && r.DATE === latestOrderDate);
-  const hasOrderNotification = log.filter(r => r.TYPE === "Order" && (r.DATE === today || r.DATE === tomorrow)).length > 0;
+  const hasOrderNotification = pendingOrder !== null || log.filter(r => r.TYPE === "Order" && (r.DATE === today || r.DATE === tomorrow)).length > 0;
 
   // Group ALL orders by date+GRN for the All Orders section
   const allOrderGroups = (() => {
@@ -1495,7 +1511,7 @@ function StockInner() {
                   <div className="mt-10">
                     <div className="mb-5">
                       <h2 className="text-[22px] font-light tracking-tight">Order Summary</h2>
-                      <p className="text-[11px] tracking-wider uppercase mt-1" style={dim}>Review · Click × to remove · Confirm when ready</p>
+                      <p className="text-[11px] tracking-wider uppercase mt-1" style={dim}>Preview · Click × to remove · Submit Order to confirm</p>
                     </div>
                     <table className="w-full border-collapse">
                       <thead>
@@ -1526,16 +1542,7 @@ function StockInner() {
                         ))}
                       </tbody>
                     </table>
-                    <div className="mt-6">
-                      <button
-                        onClick={handleInlineConfirmOrder}
-                        disabled={orderConfirming}
-                        className="flex items-center gap-2 text-[11px] tracking-wider uppercase"
-                        style={{ background: "hsl(var(--foreground))", color: "hsl(var(--background))", padding: "6px 14px", borderRadius: "5px", opacity: orderConfirming ? 0.5 : 1 }}
-                      >
-                        {orderConfirming ? "Confirming..." : "Confirm Order"}
-                      </button>
-                    </div>
+
                   </div>
                 )}
 
