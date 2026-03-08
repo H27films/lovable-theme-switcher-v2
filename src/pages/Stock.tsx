@@ -720,23 +720,58 @@ function StockInner() {
     const valid = orderEntries.filter(e => e.productName && e.qty > 0);
     if (!valid.length) return;
     setOrderError(null);
+  };
 
-    // Generate GRN: BOU DDMMYY based on selected date
+  const handleInlineConfirmOrder = async () => {
+    const valid = orderEntries.filter(e => e.productName && e.qty > 0);
+    if (!valid.length) return;
+    setOrderConfirming(true);
+    setOrderError(null);
+
     const orderDateObj = new Date(getDateStr(orderDate));
     const dd = String(orderDateObj.getDate()).padStart(2, "0");
     const mm = String(orderDateObj.getMonth() + 1).padStart(2, "0");
     const yy = String(orderDateObj.getFullYear()).slice(-2);
     const grn = `BOU ${dd}${mm}${yy}`;
 
-    const entries = valid.map(entry => {
-      const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
-      const starting = Number(product?.["BOUDOIR BALANCE"] ?? 0);
-      const qty = Number(entry.qty);
-      return { productName: entry.productName, starting, qty, ending: starting + qty };
-    });
+    try {
+      for (const entry of valid) {
+        const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
+        const starting = Number(product?.["BOUDOIR BALANCE"] ?? 0);
+        const qty = Number(entry.qty);
+        const ending = starting + qty;
+        const currentOfficeBalance = Number(product?.["OFFICE BALANCE"] ?? 0);
+        const endingOfficeBalance = currentOfficeBalance - qty;
 
-    setPendingOrder({ grn, date: getDateStr(orderDate), entries });
-    setShowOrderSummaryPanel(true);
+        const { error: orderLogErr } = await (supabase as any).from("AllFileLog").insert({
+          "DATE": getDateStr(orderDate),
+          "PRODUCT NAME": entry.productName,
+          "BRANCH": "Boudoir",
+          "SUPPLIER": "Office",
+          "TYPE": "Order",
+          "STARTING BALANCE": starting,
+          "QTY": qty,
+          "ENDING BALANCE": ending,
+          "GRN": grn,
+          "OFFICE BALANCE": endingOfficeBalance,
+        });
+        if (orderLogErr) { console.error("AllFileLog order insert error:", orderLogErr); setOrderError(orderLogErr.message || "Log write failed"); }
+
+        await (supabase as any).from("AllFileProducts")
+          .update({ "BOUDOIR BALANCE": ending })
+          .eq("PRODUCT NAME", entry.productName);
+
+        await (supabase as any).from("AllFileProducts")
+          .update({ "OFFICE BALANCE": endingOfficeBalance })
+          .eq("PRODUCT NAME", entry.productName);
+      }
+      await fetchProducts();
+      await fetchLog();
+      setOrderEntries(makeOrderEntries());
+      setOrderSuccess(true);
+      setTimeout(() => setOrderSuccess(false), 3000);
+    } catch (err) { console.error("Confirm order error:", err); }
+    setOrderConfirming(false);
   };
 
   const handleConfirmOrder = async () => {
@@ -1455,12 +1490,12 @@ function StockInner() {
                   <p className="text-[11px] mt-3 tracking-wider" style={{ color: "hsl(var(--red))" }}>✗ {orderError}</p>
                 )}
 
-                {/* Order Summary — preview before submit */}
+                {/* Order Summary — preview before confirm */}
                 {orderSummary.length > 0 && (
                   <div className="mt-10">
                     <div className="mb-5">
                       <h2 className="text-[22px] font-light tracking-tight">Order Summary</h2>
-                      <p className="text-[11px] tracking-wider uppercase mt-1" style={dim}>Preview before submitting</p>
+                      <p className="text-[11px] tracking-wider uppercase mt-1" style={dim}>Review · Click × to remove · Confirm when ready</p>
                     </div>
                     <table className="w-full border-collapse">
                       <thead>
@@ -1477,13 +1512,30 @@ function StockInner() {
                           <tr key={i} className="border-b table-row-hover" style={{ borderColor: border }}>
                             <td className="text-[13px] font-light py-3">{row.productName}</td>
                             <td className="text-[13px] font-light py-3 text-center" style={dim}>{row.current}</td>
-                            <td className="text-[13px] font-light py-3 text-center" style={{ color: "hsl(var(--green))" }}>{row.orderQty}</td>
+                            <td className="text-[13px] font-light py-3 text-center" style={{ color: "hsl(var(--green))" }}>+{row.orderQty}</td>
                             <td className="text-[13px] font-light py-3 text-center">{row.ending}</td>
-                            <td className="py-3 text-center" />
+                            <td className="py-3 text-center">
+                              <button
+                                onClick={() => setOrderEntries(prev => prev.filter(e => e.productName !== row.productName))}
+                                style={{ color: "hsl(var(--muted-foreground))" }}
+                                onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
+                                onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                              ><X size={13} /></button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                    <div className="mt-6">
+                      <button
+                        onClick={handleInlineConfirmOrder}
+                        disabled={orderConfirming}
+                        className="flex items-center gap-2 text-[11px] tracking-wider uppercase"
+                        style={{ background: "hsl(var(--foreground))", color: "hsl(var(--background))", padding: "6px 14px", borderRadius: "5px", opacity: orderConfirming ? 0.5 : 1 }}
+                      >
+                        {orderConfirming ? "Confirming..." : "Confirm Order"}
+                      </button>
+                    </div>
                   </div>
                 )}
 
