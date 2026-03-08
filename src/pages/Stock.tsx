@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -76,6 +76,7 @@ function ProductDropdown({ entry, sortedProducts, onSelect, onSearch, onToggle, 
   onToggle: () => void;
   onClose: () => void;
   showBalance?: boolean;
+  lineStyle?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -136,10 +137,10 @@ function ProductDropdown({ entry, sortedProducts, onSelect, onSearch, onToggle, 
   };
 
   return (
-    <div ref={ref} className="relative flex-1 max-w-[460px]">
+    <div ref={ref} className={lineStyle ? "relative w-full" : "relative flex-1 max-w-[460px]"}>
       <div
-        className="flex items-center justify-between px-3 py-2 cursor-pointer h-[34px]"
-        style={{ background: cardBg, border: `1px solid ${borderActive}` }}
+        className={lineStyle ? "flex items-center justify-between px-0 cursor-pointer h-[40px] w-full" : "flex items-center justify-between px-3 py-2 cursor-pointer h-[34px]"}
+        style={lineStyle ? {} : { background: cardBg, border: `1px solid ${borderActive}` }}
         onClick={onToggle}
       >
         <span className="text-[13px] font-light" style={{ color: entry.productName ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))" }}>
@@ -1314,63 +1315,83 @@ export default function Stock() {
                   <p className="text-[11px] tracking-wider uppercase" style={dim}>Add stock from a new order</p>
                   <DatePicker value={orderDate} onChange={setOrderDate} />
                 </div>
-                {/* Column headers */}
-                <div className="flex items-center gap-5 mb-1">
-                  <div className="w-4 flex-shrink-0" />
-                  <div className="flex-1 max-w-[460px]"><span className="text-[10px] tracking-wider uppercase" style={dim}>Product</span></div>
-                  <div className="flex-shrink-0 text-center" style={{width:"60px"}}><span className="text-[10px] tracking-wider uppercase" style={dim}>Balance</span></div>
-                  <div className="flex-shrink-0 text-center" style={{width:"130px"}}><span className="text-[10px] tracking-wider uppercase" style={dim}>Order Qty</span></div>
-                  <div className="w-[13px] flex-shrink-0" />
-                </div>
-                <div className="space-y-3 mb-5">
+                {/* Excel-style grid — headers + rows share same column widths */}
+                <div
+                  className="mb-5"
+                  style={{ display: "grid", gridTemplateColumns: "20px 1fr 60px 130px 16px", columnGap: "16px" }}
+                >
+                  {/* Header row */}
+                  <div />
+                  <div className="pb-2" style={{ borderBottom: `1px solid ${borderActive}` }}>
+                    <span className="text-[10px] tracking-wider uppercase" style={dim}>Product</span>
+                  </div>
+                  <div className="pb-2 text-center" style={{ borderBottom: `1px solid ${borderActive}` }}>
+                    <span className="text-[10px] tracking-wider uppercase" style={dim}>Balance</span>
+                  </div>
+                  <div className="pb-2 text-center" style={{ borderBottom: `1px solid ${borderActive}` }}>
+                    <span className="text-[10px] tracking-wider uppercase" style={dim}>Order Qty</span>
+                  </div>
+                  <div />
+
+                  {/* Data rows */}
                   {orderEntries.map((entry, idx) => {
                     const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
                     const currentBal = product?.["BOUDOIR BALANCE"] ?? null;
                     return (
-                      <div key={entry.id} className="flex items-stretch gap-5">
-                        <span className="text-[10px] w-4 text-right flex-shrink-0 pt-2.5" style={dim}>{idx + 1}</span>
-                        <ProductDropdown
-                          entry={entry}
-                          sortedProducts={sortedProducts}
-                          onSelect={name => updateOrderEntry(entry.id, { productName: name, showProductDropdown: false, productSearch: "" })}
-                          onSearch={val => updateOrderEntry(entry.id, { productSearch: val })}
-                          onToggle={() => {
-                            closeAllOrderDropdowns(entry.id);
-                            updateOrderEntry(entry.id, { showProductDropdown: !entry.showProductDropdown });
-                          }}
-                          onClose={() => updateOrderEntry(entry.id, { showProductDropdown: false })}
-                          showBalance
-                        />
-                        {/* Current balance box */}
-                        <div
-                          className="flex items-center justify-center flex-shrink-0 h-[34px]" style={{width:"60px", border: `1px solid ${border}`, background: cardBg}}
-                        >
+                      <React.Fragment key={entry.id}>
+                        {/* Row number */}
+                        <div className="flex items-center justify-end" style={{ borderBottom: `1px solid ${border}` }}>
+                          <span className="text-[10px]" style={dim}>{idx + 1}</span>
+                        </div>
+                        {/* Product cell */}
+                        <div style={{ borderBottom: `1px solid ${border}` }}>
+                          <ProductDropdown
+                            entry={entry}
+                            sortedProducts={sortedProducts}
+                            onSelect={name => updateOrderEntry(entry.id, { productName: name, showProductDropdown: false, productSearch: "" })}
+                            onSearch={val => updateOrderEntry(entry.id, { productSearch: val })}
+                            onToggle={() => {
+                              closeAllOrderDropdowns(entry.id);
+                              updateOrderEntry(entry.id, { showProductDropdown: !entry.showProductDropdown });
+                            }}
+                            onClose={() => updateOrderEntry(entry.id, { showProductDropdown: false })}
+                            showBalance
+                            lineStyle
+                          />
+                        </div>
+                        {/* Balance cell */}
+                        <div className="flex items-center justify-center" style={{ borderBottom: `1px solid ${border}` }}>
                           <span className="text-[13px] font-light" style={currentBal === null ? dim : { color: "hsl(var(--foreground))" }}>
                             {currentBal === null ? "—" : currentBal}
                           </span>
                         </div>
-                        {/* Qty stepper */}
-                        <div className="flex items-center justify-between flex-shrink-0 h-[34px]" style={{ width: "130px", border: `1px solid ${borderActive}`, background: cardBg }}>
-                          <button onClick={() => updateOrderEntry(entry.id, { qty: Math.max(1, entry.qty - 1) })}
-                            className="px-2 py-2 transition-colors" style={dim}
+                        {/* Qty stepper cell */}
+                        <div className="flex items-center justify-between py-1" style={{ borderBottom: `1px solid ${border}` }}>
+                          <button
+                            onClick={() => updateOrderEntry(entry.id, { qty: Math.max(1, entry.qty - 1) })}
+                            className="px-1.5 py-1 transition-colors" style={dim}
                             onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
                             onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
                             <ChevronLeft size={13} />
                           </button>
-                          <span className="text-[13px] font-light px-3 min-w-[32px] text-center">{entry.qty}</span>
-                          <button onClick={() => updateOrderEntry(entry.id, { qty: entry.qty + 1 })}
-                            className="px-2 py-2 transition-colors" style={dim}
+                          <span className="text-[13px] font-light min-w-[32px] text-center">{entry.qty}</span>
+                          <button
+                            onClick={() => updateOrderEntry(entry.id, { qty: entry.qty + 1 })}
+                            className="px-1.5 py-1 transition-colors" style={dim}
                             onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
                             onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
                             <ChevronRight size={13} />
                           </button>
                         </div>
-                        <button onClick={() => removeOrderEntry(entry.id)} className="flex-shrink-0 transition-colors pt-2.5" style={dim}
-                          onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
-                          onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
-                          <X size={13} />
-                        </button>
-                      </div>
+                        {/* Remove button */}
+                        <div className="flex items-center justify-center" style={{ borderBottom: `1px solid ${border}` }}>
+                          <button onClick={() => removeOrderEntry(entry.id)} className="transition-colors" style={dim}
+                            onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
+                            onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
+                            <X size={13} />
+                          </button>
+                        </div>
+                      </React.Fragment>
                     );
                   })}
                 </div>
