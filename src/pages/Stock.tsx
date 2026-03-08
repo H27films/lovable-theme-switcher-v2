@@ -1340,11 +1340,11 @@ export default function Stock() {
                     return (
                       <React.Fragment key={entry.id}>
                         {/* Row number */}
-                        <div className="flex items-center justify-end" style={{ borderBottom: `1px solid ${border}` }}>
-                          <span className="text-[10px]" style={dim}>{idx + 1}</span>
+                        <div className="flex items-center justify-end">
+                          <span className="text-[13px]" style={dim}>{idx + 1}</span>
                         </div>
                         {/* Product cell */}
-                        <div style={{ borderBottom: `1px solid ${border}` }}>
+                        <div>
                           <ProductDropdown
                             entry={entry}
                             sortedProducts={sortedProducts}
@@ -1360,13 +1360,13 @@ export default function Stock() {
                           />
                         </div>
                         {/* Balance cell */}
-                        <div className="flex items-center justify-center" style={{ borderBottom: `1px solid ${border}` }}>
+                        <div className="flex items-center justify-center">
                           <span className="text-[13px] font-light" style={currentBal === null ? dim : { color: "hsl(var(--foreground))" }}>
                             {currentBal === null ? "—" : currentBal}
                           </span>
                         </div>
                         {/* Qty stepper cell */}
-                        <div className="flex items-center justify-between py-1" style={{ borderBottom: `1px solid ${border}` }}>
+                        <div className="flex items-center justify-between py-1">
                           <button
                             onClick={() => updateOrderEntry(entry.id, { qty: Math.max(1, entry.qty - 1) })}
                             className="px-1.5 py-1 transition-colors" style={dim}
@@ -1384,13 +1384,15 @@ export default function Stock() {
                           </button>
                         </div>
                         {/* Remove button */}
-                        <div className="flex items-center justify-center" style={{ borderBottom: `1px solid ${border}` }}>
+                        <div className="flex items-center justify-center">
                           <button onClick={() => removeOrderEntry(entry.id)} className="transition-colors" style={dim}
                             onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
                             onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
                             <X size={13} />
                           </button>
                         </div>
+                        {/* Full-width row divider spanning all 5 columns */}
+                        <div style={{ gridColumn: "1 / -1", borderBottom: `1px solid ${border}`, height: 0 }} />
                       </React.Fragment>
                     );
                   })}
