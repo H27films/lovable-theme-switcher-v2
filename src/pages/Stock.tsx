@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -340,7 +341,7 @@ function DatePicker({ value, onChange }: {
   );
 }
 
-export default function Stock() {
+function StockInner() {
   const navigate = useNavigate();
   const { theme, toggle, font, cycleFont } = useTheme();
 
@@ -2056,5 +2057,13 @@ export default function Stock() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function Stock() {
+  return (
+    <ErrorBoundary>
+      <StockInner />
+    </ErrorBoundary>
   );
 }

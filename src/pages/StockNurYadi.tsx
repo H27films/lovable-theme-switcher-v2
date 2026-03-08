@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -339,7 +340,7 @@ function DatePicker({ value, onChange }: {
   );
 }
 
-export default function StockNurYadi() {
+function StockNurYadiInner() {
   const navigate = useNavigate();
   const { theme, toggle, font, cycleFont } = useTheme();
 
@@ -1965,5 +1966,13 @@ export default function StockNurYadi() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function StockNurYadi() {
+  return (
+    <ErrorBoundary>
+      <StockNurYadiInner />
+    </ErrorBoundary>
   );
 }
