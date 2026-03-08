@@ -1931,7 +1931,7 @@ const Index = () => {
                   ) : (
                     <button
                       className="minimal-btn"
-                      style={{ opacity: (orderLines.length === 0 || orderSubmitting) ? 0.4 : 1 }}
+                      style={{ background: "hsl(var(--foreground))", color: "hsl(var(--background))", opacity: (orderLines.length === 0 || orderSubmitting) ? 0.4 : 1 }}
                       disabled={orderLines.length === 0 || orderSubmitting}
                       onClick={handleOrderConfirm}
                     >
