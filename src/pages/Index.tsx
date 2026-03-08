@@ -800,7 +800,7 @@ const Index = () => {
                       onClick={() => { setSelectedBranch(branch); setExpandedBranchDates(new Set()); setExpandedGRNs(new Set()); setSelectedBranchProduct(null); }}
                       className="transition-all duration-200"
                       style={{
-                        fontSize: selectedBranch === branch ? "17px" : "13px",
+                        fontSize: selectedBranch === branch ? "15px" : "12px",
                         fontWeight: 300,
                         letterSpacing: "0.08em",
                         textTransform: "uppercase",
