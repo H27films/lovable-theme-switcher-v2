@@ -1490,7 +1490,13 @@ function StockInner() {
                         </div>
                         {/* Remove button — no border */}
                         <div className="flex items-center justify-center pl-2">
-                          <button onClick={() => removeOrderEntry(entry.id)} className="transition-colors" style={dim}
+                          <button onClick={() => {
+                            if (orderEntries.length > 5) {
+                              removeOrderEntry(entry.id);
+                            } else {
+                              updateOrderEntry(entry.id, { productName: "", qty: 1, productSearch: "", showProductDropdown: false });
+                            }
+                          }} className="transition-colors" style={dim}
                             onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
                             onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
                             <X size={13} />
@@ -1546,7 +1552,7 @@ function StockInner() {
                             <td className="py-3 text-center">
                               <button
                                 onClick={() => {
-                                  setOrderEntries(prev => prev.map(e => e.productName === row.productName ? { ...e, productName: "", qty: 0 } : e));
+                                  setOrderEntries(prev => prev.map(e => e.productName === row.productName ? { ...e, productName: "", qty: 1, productSearch: "", showProductDropdown: false } : e));
                                   setPendingOrder(prev => {
                                     if (!prev) return prev;
                                     const entries = prev.entries.filter(e => e.productName !== row.productName);
@@ -2094,7 +2100,7 @@ function StockInner() {
                                   if (!entries.length) { setOrderSubmitted(false); return null; }
                                   return { ...prev, entries };
                                 });
-                                setOrderEntries(prev => prev.map(e => e.productName === productName ? { ...e, productName: "", qty: 0 } : e));
+                                setOrderEntries(prev => prev.map(e => e.productName === productName ? { ...e, productName: "", qty: 1, productSearch: "", showProductDropdown: false } : e));
                               }}
                               style={dim}
                               onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
