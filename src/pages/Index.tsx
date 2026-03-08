@@ -713,7 +713,7 @@ const Index = () => {
               <div
                 ref={listRef}
                 className="absolute top-full left-0 right-0 z-50 border max-h-[240px] overflow-y-auto scrollbar-thin"
-                style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px" }}
+                style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px", borderRadius: "5px" }}
               >
                 {dropdownResults.map((p, i) => (
                   <div
@@ -925,7 +925,7 @@ const Index = () => {
                 {selectedBranch !== "Office" && (<>
                   {/* Product detail panel */}
                   {selectedBranchProduct && (
-                    <div className="surface-box p-5 mb-6">
+                    <div className="surface-box p-5 mb-6" style={{ borderRadius: "5px" }}>
                       {/* Header */}
                       <div className="flex items-center justify-between mb-4">
                         <div>
@@ -1113,7 +1113,7 @@ const Index = () => {
 
           {/* ── Selected product card ── */}
           {selectedProduct && (
-            <div className="surface-box p-6 mb-8">
+            <div className="surface-box p-6 mb-8" style={{ borderRadius: "5px" }}>
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <p className="text-[11px] tracking-wider uppercase mb-1" style={dim}>
@@ -1507,7 +1507,7 @@ const Index = () => {
                 <p className="text-[11px] tracking-wider uppercase mb-1" style={{ color: "hsl(var(--muted-foreground))" }}>Product Name *</p>
                 <input
                   className="w-full bg-transparent border rounded px-3 py-2 text-[13px] font-light outline-none"
-                  style={{ borderColor: "hsl(var(--border))" }}
+                  style={{ borderColor: "hsl(var(--border))", borderRadius: "5px" }}
                   value={newProduct["PRODUCT NAME"]}
                   onChange={e => setNewProduct(p => ({ ...p, "PRODUCT NAME": e.target.value }))}
                   placeholder="Product name"
@@ -1530,7 +1530,7 @@ const Index = () => {
                   {showNewProductSupplierDropdown && (
                     <div
                       className="absolute top-full left-0 z-50 w-full border rounded mt-0.5 max-h-[180px] overflow-y-auto scrollbar-thin"
-                      style={{ background: "hsl(var(--popover))", borderColor: "hsl(var(--border))" }}
+                      style={{ background: "hsl(var(--popover))", borderColor: "hsl(var(--border))", borderRadius: "5px" }}
                     >
                       {supplierOptions
                         .filter(s => s.toLowerCase().includes(newProduct["SUPPLIER"].toLowerCase()))
@@ -1564,7 +1564,7 @@ const Index = () => {
                       <p className="text-[10px] uppercase mb-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>{field.replace(" PRICE", "")}</p>
                       <input
                         className="w-full bg-transparent border rounded px-3 py-1.5 text-[13px] font-light outline-none"
-                        style={{ borderColor: "hsl(var(--border))" }}
+                        style={{ borderColor: "hsl(var(--border))", borderRadius: "5px" }}
                         type="number"
                         step="0.01"
                         min="0"
@@ -1585,7 +1585,7 @@ const Index = () => {
                   <p className="text-[11px] tracking-wider uppercase mb-1" style={{ color: "hsl(var(--muted-foreground))" }}>PAR Level</p>
                   <input
                     className="w-full bg-transparent border rounded px-3 py-1.5 text-[13px] font-light outline-none"
-                    style={{ borderColor: "hsl(var(--border))" }}
+                    style={{ borderColor: "hsl(var(--border))", borderRadius: "5px" }}
                     type="number"
                     min="0"
                     value={newProduct["PAR"]}
@@ -1597,7 +1597,7 @@ const Index = () => {
                   <p className="text-[11px] tracking-wider uppercase mb-1" style={{ color: "hsl(var(--muted-foreground))" }}>Units / Order</p>
                   <input
                     className="w-full bg-transparent border rounded px-3 py-1.5 text-[13px] font-light outline-none"
-                    style={{ borderColor: "hsl(var(--border))" }}
+                    style={{ borderColor: "hsl(var(--border))", borderRadius: "5px" }}
                     type="number"
                     min="1"
                     value={newProduct["UNITS/ORDER"]}
@@ -1612,7 +1612,7 @@ const Index = () => {
                 <p className="text-[11px] tracking-wider uppercase mb-1" style={{ color: "hsl(var(--muted-foreground))" }}>Office Section</p>
                 <input
                   className="w-full bg-transparent border rounded px-3 py-2 text-[13px] font-light outline-none"
-                  style={{ borderColor: "hsl(var(--border))" }}
+                  style={{ borderColor: "hsl(var(--border))", borderRadius: "5px" }}
                   value={newProduct["OFFICE SECTION"]}
                   onChange={e => setNewProduct(p => ({ ...p, "OFFICE SECTION": e.target.value }))}
                   placeholder="e.g. 12B"
@@ -1707,7 +1707,7 @@ const Index = () => {
               {showSupplierDropdown && (
                 <div
                   className="absolute top-full left-0 z-50 border min-w-[180px] py-1 max-h-[220px] overflow-y-auto scrollbar-thin"
-                  style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px" }}
+                  style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px", borderRadius: "5px" }}
                 >
                   {/* Clear all */}
                   <button
@@ -1764,7 +1764,7 @@ const Index = () => {
                 <div
                   ref={orderListRef}
                   className="absolute top-full left-0 right-0 z-50 border max-h-[200px] overflow-y-auto scrollbar-thin"
-                  style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px" }}
+                  style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px", borderRadius: "5px" }}
                 >
                   {orderDropdownResults.map((p, i) => (
                     <div
@@ -1931,7 +1931,7 @@ const Index = () => {
                   ) : (
                     <button
                       className="minimal-btn"
-                      style={{ background: "hsl(var(--foreground))", color: "hsl(var(--background))", opacity: (orderLines.length === 0 || orderSubmitting) ? 0.4 : 1 }}
+                      style={{ background: "hsl(var(--foreground))", color: "hsl(var(--background))", opacity: (orderLines.length === 0 || orderSubmitting) ? 0.4 : 1, borderRadius: "5px" }}
                       disabled={orderLines.length === 0 || orderSubmitting}
                       onClick={handleOrderConfirm}
                     >

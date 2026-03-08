@@ -152,7 +152,7 @@ function ProductDropdown({ entry, sortedProducts, onSelect, onSearch, onToggle, 
       {entry.showProductDropdown && (
         <div
           className="absolute top-full left-0 right-0 z-50 border"
-          style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px" }}
+          style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px", borderRadius: "5px" }}
         >
           <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: border }}>
             <Search size={11} style={dim} />
@@ -260,7 +260,7 @@ function TypeDropdown({ entry, onSelect, onToggle, onClose, lineStyle }: {
       {entry.showTypeDropdown && (
         <div
           className="absolute top-full left-0 right-0 z-50 border"
-          style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px" }}
+          style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px", borderRadius: "5px" }}
         >
           {TYPES.map((t, i) => (
             <div
@@ -993,7 +993,7 @@ function StockChicNailspaInner() {
             <button
               onClick={() => navigate("/")}
               className="flex items-center justify-center w-7 h-7 rounded-full border transition-colors"
-              style={{ ...dim, borderColor: "hsl(var(--border))" }}
+              style={{ ...dim, borderColor: "hsl(var(--border))", borderRadius: "5px" }}
               aria-label="Go to home"
               onMouseEnter={e => {
                 e.currentTarget.style.color = "hsl(var(--foreground))";
@@ -1081,7 +1081,7 @@ function StockChicNailspaInner() {
                 <div
                   ref={stockListRef}
                   className="absolute top-full left-0 right-0 z-50 border max-h-[220px] overflow-y-auto scrollbar-thin"
-                  style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px" }}
+                  style={{ background: "hsl(var(--popover))", borderColor: borderActive, marginTop: "2px", borderRadius: "5px" }}
                 >
                   {filteredStockProducts.map((row, i) => (
                     <div key={row["PRODUCT NAME"]}
@@ -1112,7 +1112,7 @@ function StockChicNailspaInner() {
                 return `RM ${val.toFixed(2)}`;
               };
               return (
-                <div className="surface-box p-6">
+                <div className="surface-box p-6" style={{ borderRadius: "5px" }}>
                   {/* Balance row */}
                   <div className="flex items-center justify-between mb-6">
                     <div>
@@ -1320,7 +1320,7 @@ function StockChicNailspaInner() {
                   onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
                   <Plus size={11} /> Add another product
                 </button>
-                <button onClick={handleSubmit} disabled={submitting} className="minimal-btn" style={{ opacity: submitting ? 0.5 : 1 }}>
+                <button onClick={handleSubmit} disabled={submitting} className="minimal-btn" style={{ opacity: submitting ? 0.5 : 1, borderRadius: "5px" }}>
                   {submitting ? "Saving..." : "Submit"}
                 </button>
                 {submitSuccess && (
@@ -1425,7 +1425,7 @@ function StockChicNailspaInner() {
                   onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
                   <Plus size={11} /> Add another product
                 </button>
-                <button onClick={handleOrderSubmit} disabled={orderSubmitting} className="minimal-btn" style={{ opacity: orderSubmitting ? 0.5 : 1 }}>
+                <button onClick={handleOrderSubmit} disabled={orderSubmitting} className="minimal-btn" style={{ opacity: orderSubmitting ? 0.5 : 1, borderRadius: "5px" }}>
                   {orderSubmitting ? "Saving..." : "Submit Order"}
                 </button>
                 {orderSuccess && (
@@ -1691,7 +1691,7 @@ function StockChicNailspaInner() {
                 const info = products.find(p => p["PRODUCT NAME"] === selectedActivityProduct) ?? null;
                 const activityForProduct = log.filter(r => r["PRODUCT NAME"] === selectedActivityProduct);
                 return (
-                  <div className="surface-box p-5 mb-6">
+                  <div className="surface-box p-5 mb-6" style={{ borderRadius: "5px" }}>
                     <div className="flex items-center justify-between mb-4">
                       <div>
                         <p className="text-[11px] tracking-wider uppercase mb-1" style={dim}>Chic Nailspa · Product Detail</p>
@@ -2030,7 +2030,7 @@ function StockChicNailspaInner() {
             {/* ── All Orders ── */}
             {allOrderGroups.length > 0 && (
               <div>
-                <div className="border-t pt-8 mb-6" style={{ borderColor: "hsl(var(--border))" }}>
+                <div className="border-t pt-8 mb-6" style={{ borderColor: "hsl(var(--border))", borderRadius: "5px" }}>
                   <h3 className="text-[13px] font-light tracking-tight mb-1">All Orders</h3>
                   <p className="text-[10px] tracking-wider uppercase" style={dim}>Last 60 days</p>
                 </div>
@@ -2049,7 +2049,7 @@ function StockChicNailspaInner() {
                         <tr
                           key={group.key}
                           className="border-b cursor-pointer"
-                          style={{ borderColor: "hsl(var(--border))" }}
+                          style={{ borderColor: "hsl(var(--border))", borderRadius: "5px" }}
                           onClick={() => toggleGRN(group.key)}
                           onMouseEnter={e => (e.currentTarget.style.background = "hsl(var(--card))")}
                           onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
