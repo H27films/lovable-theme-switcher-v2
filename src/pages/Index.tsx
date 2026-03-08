@@ -75,8 +75,8 @@ const Index = () => {
 
   const branchRoutes: Record<string, string> = {
     "Boudoir": "/stock",
-    "Nur Yadi": "/stocknuryadi",
     "Chic Nailspa": "/stockchicnailspa",
+    "Nur Yadi": "/stocknuryadi",
   };
 
   const [products, setProducts] = useState<OfficeProduct[]>([]);
@@ -794,7 +794,7 @@ const Index = () => {
               <div className="mb-8">
                 {/* Branch selector — now includes Office */}
                 <div className="flex items-center gap-6 mb-6">
-                  {(["Office", "Boudoir", "Nur Yadi", "Chic Nailspa"] as const).map(branch => (
+                  {(["Office", "Boudoir", "Chic Nailspa", "Nur Yadi"] as const).map(branch => (
                     <button
                       key={branch}
                       onClick={() => { setSelectedBranch(branch); setExpandedBranchDates(new Set()); setExpandedGRNs(new Set()); setSelectedBranchProduct(null); }}
@@ -1169,12 +1169,12 @@ const Index = () => {
                   <p className="text-[22px] font-light">{selectedProduct["BOUDOIR BALANCE"] ?? "—"}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] tracking-wider uppercase mb-1" style={dim}>Nur Yadi</p>
-                  <p className="text-[22px] font-light">{selectedProduct["NUR YADI BALANCE"] ?? "—"}</p>
-                </div>
-                <div>
                   <p className="text-[10px] tracking-wider uppercase mb-1" style={dim}>Chic Nailspa</p>
                   <p className="text-[22px] font-light">{selectedProduct["CHIC NAILSPA BALANCE"] ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] tracking-wider uppercase mb-1" style={dim}>Nur Yadi</p>
+                  <p className="text-[22px] font-light">{selectedProduct["NUR YADI BALANCE"] ?? "—"}</p>
                 </div>
                 {selectedProduct["OFFICE SECTION"] && (
                   <div>
