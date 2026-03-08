@@ -1020,12 +1020,12 @@ export default function StockChicNailspa() {
 
         <div className="py-6">
 
-          {/* ── SECTION 1: Current Stock ── */}
+          {/* ── SECTION 1: Chic Nailspa Stock ── */}
           <div className="mb-12">
             <div className="mb-6">
               <div className="flex items-end justify-between">
                 <div>
-                <h1 className="text-[11px] font-normal tracking-[0.2em] uppercase text-dim mb-1">Current Stock</h1>
+                <h1 className="text-[11px] font-normal tracking-[0.2em] uppercase text-dim mb-1">Chic Nailspa Stock</h1>
                   <p className="text-[28px] font-light tracking-tight">
                     {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
                   </p>
