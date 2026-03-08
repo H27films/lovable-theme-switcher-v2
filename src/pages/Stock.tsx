@@ -374,6 +374,7 @@ function StockInner() {
   const [orderError, setOrderError] = useState<string | null>(null);
   const [pendingOrder, setPendingOrder] = useState<{ grn: string; date: string; entries: { productName: string; starting: number; qty: number; ending: number }[] } | null>(null);
   const [orderConfirming, setOrderConfirming] = useState(false);
+  const [orderConfirmMode] = useState(() => localStorage.getItem("orderConfirmation") !== "false");
   const [editingPendingIdx, setEditingPendingIdx] = useState<number | null>(null);
   const [editingPendingQty, setEditingPendingQty] = useState("");
 
@@ -717,7 +718,7 @@ function StockInner() {
       return { productName: e.productName, current, orderQty, ending: current + orderQty };
     });
 
-  const handleOrderSubmit = () => {
+  const handleOrderSubmit = async () => {
     const valid = orderEntries.filter(e => e.productName && e.qty > 0);
     if (!valid.length) return;
     setOrderError(null);
@@ -728,16 +729,54 @@ function StockInner() {
     const yy = String(orderDateObj.getFullYear()).slice(-2);
     const grn = `BOU ${dd}${mm}${yy}`;
 
-    const entries = valid.map(entry => {
-      const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
-      const starting = Number(product?.["BOUDOIR BALANCE"] ?? 0);
-      const qty = Number(entry.qty);
-      const ending = starting + qty;
-      return { productName: entry.productName, starting, qty, ending };
-    });
-
-    setPendingOrder({ grn, date: getDateStr(orderDate), entries });
-    setOrderSubmitted(true);
+    if (orderConfirmMode) {
+      // V2: build pending order, wait for confirmation
+      const entries = valid.map(entry => {
+        const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
+        const starting = Number(product?.["BOUDOIR BALANCE"] ?? 0);
+        const qty = Number(entry.qty);
+        const ending = starting + qty;
+        return { productName: entry.productName, starting, qty, ending };
+      });
+      setPendingOrder({ grn, date: getDateStr(orderDate), entries });
+      setOrderSubmitted(true);
+    } else {
+      // V1: write directly to Supabase
+      setOrderSubmitting(true);
+      try {
+        for (const entry of valid) {
+          const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
+          const currentBranchBalance = Number(product?.["BOUDOIR BALANCE"] ?? 0);
+          const endingBranchBalance = currentBranchBalance + Number(entry.qty);
+          const currentOfficeBalance = Number(product?.["OFFICE BALANCE"] ?? 0);
+          const endingOfficeBalance = currentOfficeBalance - Number(entry.qty);
+          await (supabase as any).from("AllFileLog").insert({
+            "DATE": getDateStr(orderDate),
+            "PRODUCT NAME": entry.productName,
+            "BRANCH": "Boudoir",
+            "SUPPLIER": "Office",
+            "TYPE": "Order",
+            "STARTING BALANCE": currentBranchBalance,
+            "QTY": Number(entry.qty),
+            "ENDING BALANCE": endingBranchBalance,
+            "GRN": grn,
+            "OFFICE BALANCE": endingOfficeBalance,
+          });
+          await (supabase as any).from("AllFileProducts")
+            .update({ "BOUDOIR BALANCE": endingBranchBalance })
+            .eq("PRODUCT NAME", entry.productName);
+          await (supabase as any).from("AllFileProducts")
+            .update({ "OFFICE BALANCE": endingOfficeBalance })
+            .eq("PRODUCT NAME", entry.productName);
+        }
+        await fetchProducts();
+        await fetchLog();
+        setOrderEntries(makeOrderEntries());
+        setOrderSuccess(true);
+        setTimeout(() => setOrderSuccess(false), 3000);
+      } catch (err) { console.error("Order submit error:", err); }
+      setOrderSubmitting(false);
+    }
   };
 
   const handleResetOrder = () => {

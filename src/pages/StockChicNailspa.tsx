@@ -356,6 +356,10 @@ function StockChicNailspaInner() {
   const [orderEntries, setOrderEntries] = useState<OrderLine[]>(makeOrderEntries());
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [orderSubmitted, setOrderSubmitted] = useState(false);
+  const [pendingOrder, setPendingOrder] = useState<{ grn: string; date: string; entries: { productName: string; starting: number; qty: number; ending: number }[] } | null>(null);
+  const [orderConfirming, setOrderConfirming] = useState(false);
+  const [orderConfirmMode] = useState(() => localStorage.getItem("orderConfirmation") !== "false");
   const [reversing, setReversing] = useState<number | null>(null);
   const [showOrderSummaryPanel, setShowOrderSummaryPanel] = useState(false);
   const [grnNotes, setGrnNotes] = useState("");
@@ -712,15 +716,30 @@ function StockChicNailspaInner() {
   const handleOrderSubmit = async () => {
     const valid = orderEntries.filter(e => e.productName && e.qty > 0);
     if (!valid.length) return;
-    setOrderSubmitting(true);
 
-    // Generate GRN: BOU DDMMYY based on selected date
+    // Generate GRN: CHIC DDMMYY based on selected date
     const orderDateObj = new Date(getDateStr(orderDate));
     const dd = String(orderDateObj.getDate()).padStart(2, "0");
     const mm = String(orderDateObj.getMonth() + 1).padStart(2, "0");
     const yy = String(orderDateObj.getFullYear()).slice(-2);
     const grn = `CHIC ${dd}${mm}${yy}`;
 
+    if (orderConfirmMode) {
+      // V2: build pending order
+      const entries = valid.map(entry => {
+        const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
+        const starting = Number(product?.["CHIC NAILSPA BALANCE"] ?? 0);
+        const qty = Number(entry.qty);
+        const ending = starting + qty;
+        return { productName: entry.productName, starting, qty, ending };
+      });
+      setPendingOrder({ grn, date: getDateStr(orderDate), entries });
+      setOrderSubmitted(true);
+      return;
+    }
+
+    // V1: existing direct write
+    setOrderSubmitting(true);
     try {
       for (const entry of valid) {
         const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
@@ -762,6 +781,57 @@ function StockChicNailspaInner() {
     setOrderSubmitting(false);
   };
 
+  const handleResetOrder = () => {
+    setPendingOrder(null);
+    setOrderEntries(makeOrderEntries());
+    setOrderSubmitted(false);
+    setOrderError(null);
+  };
+
+  const handleConfirmOrder = async () => {
+    if (!pendingOrder) return;
+    setOrderConfirming(true);
+    setOrderError(null);
+    try {
+      for (const entry of pendingOrder.entries) {
+        const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
+        const currentBranchBalance = Number(product?.["CHIC NAILSPA BALANCE"] ?? 0);
+        const endingBranchBalance = currentBranchBalance + Number(entry.qty);
+        const currentOfficeBalance = Number(product?.["OFFICE BALANCE"] ?? 0);
+        const endingOfficeBalance = currentOfficeBalance - Number(entry.qty);
+        await (supabase as any).from("AllFileLog").insert({
+          "DATE": pendingOrder.date,
+          "PRODUCT NAME": entry.productName,
+          "BRANCH": "Chic Nailspa",
+          "SUPPLIER": "Office",
+          "TYPE": "Order",
+          "STARTING BALANCE": entry.starting,
+          "QTY": entry.qty,
+          "ENDING BALANCE": entry.ending,
+          "GRN": pendingOrder.grn,
+          "OFFICE BALANCE": endingOfficeBalance,
+        });
+        await (supabase as any).from("AllFileProducts")
+          .update({ "CHIC NAILSPA BALANCE": endingBranchBalance })
+          .eq("PRODUCT NAME", entry.productName);
+        await (supabase as any).from("AllFileProducts")
+          .update({ "OFFICE BALANCE": endingOfficeBalance })
+          .eq("PRODUCT NAME", entry.productName);
+      }
+      await fetchProducts();
+      await fetchLog();
+      setOrderEntries(makeOrderEntries());
+      setPendingOrder(null);
+      setOrderSubmitted(false);
+      setOrderSuccess(true);
+      setTimeout(() => setOrderSuccess(false), 3000);
+    } catch (err) {
+      console.error("Confirm order error:", err);
+      setOrderError("Failed to confirm order. Please try again.");
+    }
+    setOrderConfirming(false);
+  };
+
   const dim: React.CSSProperties = { color: "hsl(var(--muted-foreground))" };
   const border = "hsl(var(--border))";
   const borderActive = "hsl(var(--border-active))";
@@ -772,7 +842,7 @@ function StockChicNailspaInner() {
   const latestOrderDate = allOrderDates[0] ?? today;
   const todayOrders = log.filter(r => r.TYPE === "Order" && r.DATE === latestOrderDate);
   const allTodayOrders = log.filter(r => r.TYPE === "Order" && r.DATE === latestOrderDate);
-  const hasOrderNotification = log.filter(r => r.TYPE === "Order" && (r.DATE === today || r.DATE === tomorrow)).length > 0;
+  const hasOrderNotification = pendingOrder !== null || log.filter(r => r.TYPE === "Order" && (r.DATE === today || r.DATE === tomorrow)).length > 0;
 
   // Group ALL orders by date+GRN for the All Orders section
   const allOrderGroups = (() => {
@@ -1407,7 +1477,13 @@ function StockChicNailspaInner() {
                         </div>
                         {/* Remove button — no border */}
                         <div className="flex items-center justify-center pl-2">
-                          <button onClick={() => removeOrderEntry(entry.id)} className="transition-colors" style={dim}
+                          <button onClick={() => {
+                            if (orderEntries.length > 5) {
+                              removeOrderEntry(entry.id);
+                            } else {
+                              updateOrderEntry(entry.id, { productName: "", qty: 1, productSearch: "", showProductDropdown: false });
+                            }
+                          }} className="transition-colors" style={dim}
                             onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
                             onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
                             <X size={13} />
@@ -1426,6 +1502,9 @@ function StockChicNailspaInner() {
                 <button onClick={handleOrderSubmit} disabled={orderSubmitting} className="minimal-btn" style={{ opacity: orderSubmitting ? 0.5 : 1, borderRadius: "5px" }}>
                   {orderSubmitting ? "Saving..." : "Submit Order"}
                 </button>
+                {orderSubmitted && !orderSuccess && (
+                  <p className="text-[11px] mt-3 tracking-wider" style={{ color: "hsl(var(--green))" }}>✓ Order submitted</p>
+                )}
                 {orderSuccess && (
                   <p className="text-[11px] mt-3 tracking-wider" style={{ color: "hsl(var(--green))" }}>✓ Order applied successfully</p>
                 )}
@@ -1438,7 +1517,7 @@ function StockChicNailspaInner() {
                   <div className="mt-10">
                     <div className="mb-5">
                       <h2 className="text-[22px] font-light tracking-tight">Order Summary</h2>
-                      <p className="text-[11px] tracking-wider uppercase mt-1" style={dim}>Preview before submitting</p>
+                      <p className="text-[11px] tracking-wider uppercase mt-1" style={dim}>{pendingOrder ? "Pending · Click × to remove" : "Preview · Click × to remove · Submit Order to confirm"}</p>
                     </div>
                     <table className="w-full border-collapse">
                       <thead>
@@ -1457,7 +1536,22 @@ function StockChicNailspaInner() {
                             <td className="text-[13px] font-light py-3 text-center" style={dim}>{row.current}</td>
                             <td className="text-[13px] font-light py-3 text-center" style={{ color: "hsl(var(--green))" }}>{row.orderQty}</td>
                             <td className="text-[13px] font-light py-3 text-center">{row.ending}</td>
-                            <td className="py-3 text-center" />
+                            <td className="py-3 text-center">
+                              <button
+                                onClick={() => {
+                                  setOrderEntries(prev => prev.map(e => e.productName === row.productName ? { ...e, productName: "", qty: 1, productSearch: "", showProductDropdown: false } : e));
+                                  setPendingOrder(prev => {
+                                    if (!prev) return prev;
+                                    const entries = prev.entries.filter(e => e.productName !== row.productName);
+                                    if (!entries.length) { setOrderSubmitted(false); return null; }
+                                    return { ...prev, entries };
+                                  });
+                                }}
+                                style={{ color: "hsl(var(--muted-foreground))" }}
+                                onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
+                                onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                              ><X size={13} /></button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -1915,6 +2009,89 @@ function StockChicNailspaInner() {
                 <X size={16} />
               </button>
             </div>
+
+            {/* V2: Pending order confirmation */}
+            {pendingOrder !== null && (
+              <div className="mb-8">
+                <div className="flex items-center gap-3 mb-1">
+                  <h3 className="text-[15px] font-light tracking-tight">
+                    {new Date(pendingOrder.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                  </h3>
+                  <span className="text-[10px] tracking-[0.15em] uppercase px-2 py-0.5" style={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "4px", color: "hsl(var(--muted-foreground))" }}>
+                    Pending
+                  </span>
+                  <span className="text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    · {pendingOrder.entries.length} {pendingOrder.entries.length === 1 ? "item" : "items"}
+                  </span>
+                </div>
+                <p className="text-[10px] tracking-[0.15em] uppercase mb-4" style={{ color: "hsl(var(--muted-foreground))" }}>{pendingOrder.grn}</p>
+                <table className="w-full border-collapse mb-5">
+                  <thead>
+                    <tr className="border-b" style={{ borderColor: "hsl(var(--border-active))" }}>
+                      <th className="label-uppercase font-normal text-left pb-2 pt-1">Product</th>
+                      <th className="label-uppercase font-normal text-center pb-2 pt-1">Qty</th>
+                      <th className="label-uppercase font-normal text-center pb-2 pt-1">Ending</th>
+                      <th className="w-6" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingOrder.entries.map((entry, idx) => {
+                      return (
+                        <tr key={idx} className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
+                          <td className="text-[13px] font-light py-3">{entry.productName}</td>
+                          <td className="text-[13px] font-light py-3 text-center" style={{ color: "hsl(var(--green))" }}>+{entry.qty}</td>
+                          <td className="text-[13px] font-light py-3 text-center">{entry.ending}</td>
+                          <td className="py-3 text-center">
+                            <button
+                              onClick={() => {
+                                const productName = entry.productName;
+                                setPendingOrder(prev => {
+                                  if (!prev) return prev;
+                                  const entries = prev.entries.filter((_, i) => i !== idx);
+                                  if (!entries.length) { setOrderSubmitted(false); return null; }
+                                  return { ...prev, entries };
+                                });
+                                setOrderEntries(prev => prev.map(e => e.productName === productName ? { ...e, productName: "", qty: 1, productSearch: "", showProductDropdown: false } : e));
+                              }}
+                              style={{ color: "hsl(var(--muted-foreground))" }}
+                              onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
+                              onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                            ><X size={13} /></button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {/* Confirm + Reset buttons */}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleConfirmOrder}
+                    disabled={orderConfirming}
+                    className="text-[11px] tracking-wider uppercase transition-colors"
+                    style={{ background: "hsl(var(--foreground))", color: "hsl(var(--background))", padding: "6px 12px", borderRadius: "5px", opacity: orderConfirming ? 0.5 : 1 }}
+                  >
+                    {orderConfirming ? "Confirming..." : "Confirm Order"}
+                  </button>
+                  <button
+                    onClick={handleResetOrder}
+                    className="text-[11px] tracking-wider uppercase transition-colors"
+                    style={{ color: "hsl(var(--muted-foreground))" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                  >
+                    Reset
+                  </button>
+                </div>
+                {orderError && (
+                  <p className="text-[11px] mt-3 tracking-wider" style={{ color: "hsl(var(--red))" }}>✗ {orderError}</p>
+                )}
+                {orderSuccess && (
+                  <p className="text-[11px] mt-3 tracking-wider" style={{ color: "hsl(var(--green))" }}>✓ Order confirmed</p>
+                )}
+                <div className="mt-6 mb-2 border-t" style={{ borderColor: "hsl(var(--border))" }} />
+              </div>
+            )}
 
             {/* ── Most recent order (editable) ── */}
             {allTodayOrders.length === 0 ? (
