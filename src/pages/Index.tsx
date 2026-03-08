@@ -806,8 +806,8 @@ const Index = () => {
                         textTransform: "uppercase",
                         color: selectedBranch === branch ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
                       }}
-                      onMouseEnter={e => { if (selectedBranch !== branch) { e.currentTarget.style.color = "hsl(var(--foreground))"; e.currentTarget.style.fontSize = "16px"; } }}
-                      onMouseLeave={e => { if (selectedBranch !== branch) { e.currentTarget.style.color = "hsl(var(--muted-foreground))"; e.currentTarget.style.fontSize = "14px"; } }}
+                      onMouseEnter={e => { if (selectedBranch !== branch) { e.currentTarget.style.color = "hsl(var(--foreground))"; e.currentTarget.style.fontSize = "15px"; } }}
+                      onMouseLeave={e => { if (selectedBranch !== branch) { e.currentTarget.style.color = "hsl(var(--muted-foreground))"; e.currentTarget.style.fontSize = "12px"; } }}
                     >
                       {branch}
                     </button>
