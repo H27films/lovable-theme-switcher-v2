@@ -68,7 +68,7 @@ const makeOrderEntries = (): OrderLine[] => [1,2,3,4,5].map(id => ({
   id, productName: "", qty: 1, showProductDropdown: false, productSearch: "",
 }));
 
-function ProductDropdown({ entry, sortedProducts, onSelect, onSearch, onToggle, onClose, showBalance }: {
+function ProductDropdown({ entry, sortedProducts, onSelect, onSearch, onToggle, onClose, showBalance, lineStyle }: {
   entry: { productName: string; showProductDropdown: boolean; productSearch: string };
   sortedProducts: AllFileProduct[];
   onSelect: (name: string) => void;
@@ -76,6 +76,7 @@ function ProductDropdown({ entry, sortedProducts, onSelect, onSearch, onToggle, 
   onToggle: () => void;
   onClose: () => void;
   showBalance?: boolean;
+  lineStyle?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -136,10 +137,10 @@ function ProductDropdown({ entry, sortedProducts, onSelect, onSearch, onToggle, 
   };
 
   return (
-    <div ref={ref} className="relative flex-1 max-w-[460px]">
+    <div ref={ref} className={lineStyle ? "relative w-full" : "relative flex-1 max-w-[460px]"}>
       <div
-        className="flex items-center justify-between px-3 py-2 cursor-pointer h-[34px]"
-        style={{ background: cardBg, border: `1px solid ${borderActive}` }}
+        className={lineStyle ? "flex items-center justify-between px-0 cursor-pointer h-[40px] w-full" : "flex items-center justify-between px-3 py-2 cursor-pointer h-[34px]"}
+        style={lineStyle ? {} : { background: cardBg, border: `1px solid ${borderActive}` }}
         onClick={onToggle}
       >
         <span className="text-[13px] font-light" style={{ color: entry.productName ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))" }}>
@@ -1227,141 +1228,83 @@ export default function StockChicNailspa() {
                   <p className="text-[11px] tracking-wider uppercase" style={dim}>Enter today's stock movements</p>
                   <DatePicker value={usageDate} onChange={setUsageDate} />
                 </div>
-                {/* Column headers */}
-                <div className="flex items-center gap-5 mb-1">
-                  <div className="w-4 flex-shrink-0" />
-                  <div className="flex-1"><span className="text-[10px] tracking-wider uppercase" style={dim}>Product</span></div>
-                  <div className="flex-shrink-0 text-center" style={{width:"150px"}}><span className="text-[10px] tracking-wider uppercase" style={dim}>Type</span></div>
-                  <div className="flex-shrink-0 text-center" style={{width:"130px"}}><span className="text-[10px] tracking-wider uppercase" style={dim}>Qty</span></div>
-                  <div className="w-[13px] flex-shrink-0" />
-                </div>
-                <div className="space-y-3 mb-5">
-                  {entries.map((entry, idx) => (
-                    <div key={entry.id} className="flex items-stretch gap-5">
-                      <span className="text-[10px] w-4 text-right flex-shrink-0 pt-2.5" style={dim}>{idx + 1}</span>
-                      <ProductDropdown
-                        entry={entry}
-                        sortedProducts={sortedProducts}
-                        onSelect={name => updateEntry(entry.id, { productName: name, showProductDropdown: false, productSearch: "" })}
-                        onSearch={val => updateEntry(entry.id, { productSearch: val })}
-                        onToggle={() => {
-                          closeAllDropdowns(entry.id, "product");
-                          updateEntry(entry.id, { showProductDropdown: !entry.showProductDropdown, showTypeDropdown: false });
-                        }}
-                        onClose={() => updateEntry(entry.id, { showProductDropdown: false })}
-                        showBalance
-                      />
-                      <TypeDropdown
-                        entry={entry}
-                        onSelect={type => updateEntry(entry.id, { type, showTypeDropdown: false })}
-                        onToggle={() => {
-                          closeAllDropdowns(entry.id, "type");
-                          updateEntry(entry.id, { showTypeDropdown: !entry.showTypeDropdown, showProductDropdown: false });
-                        }}
-                        onClose={() => updateEntry(entry.id, { showTypeDropdown: false })}
-                      />
-                      <div className="flex items-center flex-shrink-0 h-[34px]" style={{ border: `1px solid ${borderActive}`, background: cardBg }}>
-                        <button onClick={() => updateEntry(entry.id, { qty: Math.max(1, entry.qty - 1) })}
-                          className="px-2 py-2 transition-colors" style={dim}
-                          onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
-                          onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
-                          <ChevronLeft size={13} />
-                        </button>
-                        <span className="text-[13px] font-light px-3 min-w-[32px] text-center">{entry.qty}</span>
-                        <button onClick={() => updateEntry(entry.id, { qty: entry.qty + 1 })}
-                          className="px-2 py-2 transition-colors" style={dim}
-                          onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
-                          onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
-                          <ChevronRight size={13} />
-                        </button>
-                      </div>
-                      <button onClick={() => removeEntry(entry.id)} className="flex-shrink-0 transition-colors pt-2.5" style={dim}
-                        onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
-                        onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
-                        <X size={13} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <button onClick={addEntry}
-                  className="flex items-center gap-1.5 mb-7 text-[11px] tracking-wider uppercase transition-colors" style={dim}
-                  onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
-                  <Plus size={11} /> Add another product
-                </button>
-                <button onClick={handleSubmit} disabled={submitting} className="minimal-btn" style={{ opacity: submitting ? 0.5 : 1 }}>
-                  {submitting ? "Saving..." : "Submit"}
-                </button>
-                {submitSuccess && (
-                  <p className="text-[11px] mt-3 tracking-wider" style={{ color: "hsl(var(--green))" }}>✓ Stock updated successfully</p>
-                )}
-              </div>
-            )}
+                {/* Excel-style grid — no column-gap, border-bottom on cells 2–4 only for seamless line */}
+                <div
+                  className="mb-5"
+                  style={{ display: "grid", gridTemplateColumns: "20px 1fr 70px 140px 28px", columnGap: 0, marginLeft: "-4px" }}
+                >
+                  {/* Header row — border-bottom only on Product, Balance, Order Qty */}
+                  <div />
+                  <div className="pb-2 pr-4" style={{ borderBottom: `1px solid ${borderActive}` }}>
+                    <span className="text-[10px] tracking-wider uppercase" style={dim}>Product</span>
+                  </div>
+                  <div className="pb-2 px-2 text-center" style={{ borderBottom: `1px solid ${borderActive}` }}>
+                    <span className="text-[10px] tracking-wider uppercase" style={dim}>Balance</span>
+                  </div>
+                  <div className="pb-2 px-2 text-center" style={{ borderBottom: `1px solid ${borderActive}` }}>
+                    <span className="text-[10px] tracking-wider uppercase" style={dim}>Order Qty</span>
+                  </div>
+                  <div />
 
-            {/* ── Order panel ── */}
-            {mode === "order" && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-[11px] tracking-wider uppercase" style={dim}>Add stock from a new order</p>
-                  <DatePicker value={orderDate} onChange={setOrderDate} />
-                </div>
-                {/* Column headers */}
-                <div className="flex items-center gap-5 mb-1">
-                  <div className="w-4 flex-shrink-0" />
-                  <div className="flex-1 max-w-[460px]"><span className="text-[10px] tracking-wider uppercase" style={dim}>Product</span></div>
-                  <div className="flex-shrink-0 text-center" style={{width:"60px"}}><span className="text-[10px] tracking-wider uppercase" style={dim}>Balance</span></div>
-                  <div className="flex-shrink-0 text-center" style={{width:"130px"}}><span className="text-[10px] tracking-wider uppercase" style={dim}>Order Qty</span></div>
-                  <div className="w-[13px] flex-shrink-0" />
-                </div>
-                <div className="space-y-3 mb-5">
+                  {/* Data rows */}
                   {orderEntries.map((entry, idx) => {
                     const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
                     const currentBal = product?.["CHIC NAILSPA BALANCE"] ?? null;
                     return (
-                      <div key={entry.id} className="flex items-stretch gap-5">
-                        <span className="text-[10px] w-4 text-right flex-shrink-0 pt-2.5" style={dim}>{idx + 1}</span>
-                        <ProductDropdown
-                          entry={entry}
-                          sortedProducts={sortedProducts}
-                          onSelect={name => updateOrderEntry(entry.id, { productName: name, showProductDropdown: false, productSearch: "" })}
-                          onSearch={val => updateOrderEntry(entry.id, { productSearch: val })}
-                          onToggle={() => {
-                            closeAllOrderDropdowns(entry.id);
-                            updateOrderEntry(entry.id, { showProductDropdown: !entry.showProductDropdown });
-                          }}
-                          onClose={() => updateOrderEntry(entry.id, { showProductDropdown: false })}
-                          showBalance
-                        />
-                        {/* Current balance box */}
-                        <div
-                          className="flex items-center justify-center flex-shrink-0 h-[34px]" style={{width:"60px", border: `1px solid ${border}`, background: cardBg}}
-                        >
+                      <React.Fragment key={entry.id}>
+                        {/* Row number — no border */}
+                        <div className="flex items-center justify-start">
+                          <span className="text-[13px]" style={dim}>{idx + 1}</span>
+                        </div>
+                        {/* Product cell — border-bottom */}
+                        <div className="pr-4" style={{ borderBottom: `1px solid ${border}` }}>
+                          <ProductDropdown
+                            entry={entry}
+                            sortedProducts={sortedProducts}
+                            onSelect={name => updateOrderEntry(entry.id, { productName: name, showProductDropdown: false, productSearch: "" })}
+                            onSearch={val => updateOrderEntry(entry.id, { productSearch: val })}
+                            onToggle={() => {
+                              closeAllOrderDropdowns(entry.id);
+                              updateOrderEntry(entry.id, { showProductDropdown: !entry.showProductDropdown });
+                            }}
+                            onClose={() => updateOrderEntry(entry.id, { showProductDropdown: false })}
+                            showBalance
+                            lineStyle
+                          />
+                        </div>
+                        {/* Balance cell — border-bottom */}
+                        <div className="flex items-center justify-center px-2" style={{ borderBottom: `1px solid ${border}` }}>
                           <span className="text-[13px] font-light" style={currentBal === null ? dim : { color: "hsl(var(--foreground))" }}>
                             {currentBal === null ? "—" : currentBal}
                           </span>
                         </div>
-                        {/* Qty stepper */}
-                        <div className="flex items-center justify-between flex-shrink-0 h-[34px]" style={{ width: "130px", border: `1px solid ${borderActive}`, background: cardBg }}>
-                          <button onClick={() => updateOrderEntry(entry.id, { qty: Math.max(1, entry.qty - 1) })}
-                            className="px-2 py-2 transition-colors" style={dim}
+                        {/* Qty stepper cell — border-bottom */}
+                        <div className="flex items-center justify-between py-1 px-2" style={{ borderBottom: `1px solid ${border}` }}>
+                          <button
+                            onClick={() => updateOrderEntry(entry.id, { qty: Math.max(1, entry.qty - 1) })}
+                            className="px-1.5 py-1 transition-colors" style={dim}
                             onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
                             onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
                             <ChevronLeft size={13} />
                           </button>
-                          <span className="text-[13px] font-light px-3 min-w-[32px] text-center">{entry.qty}</span>
-                          <button onClick={() => updateOrderEntry(entry.id, { qty: entry.qty + 1 })}
-                            className="px-2 py-2 transition-colors" style={dim}
+                          <span className="text-[13px] font-light min-w-[32px] text-center">{entry.qty}</span>
+                          <button
+                            onClick={() => updateOrderEntry(entry.id, { qty: entry.qty + 1 })}
+                            className="px-1.5 py-1 transition-colors" style={dim}
                             onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
                             onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
                             <ChevronRight size={13} />
                           </button>
                         </div>
-                        <button onClick={() => removeOrderEntry(entry.id)} className="flex-shrink-0 transition-colors pt-2.5" style={dim}
-                          onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
-                          onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
-                          <X size={13} />
-                        </button>
-                      </div>
+                        {/* Remove button — no border */}
+                        <div className="flex items-center justify-center pl-2">
+                          <button onClick={() => removeOrderEntry(entry.id)} className="transition-colors" style={dim}
+                            onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
+                            onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
+                            <X size={13} />
+                          </button>
+                        </div>
+                      </React.Fragment>
                     );
                   })}
                 </div>
