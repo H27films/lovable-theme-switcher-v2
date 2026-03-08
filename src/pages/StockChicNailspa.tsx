@@ -1308,8 +1308,8 @@ export default function StockChicNailspa() {
                 {/* Column headers */}
                 <div className="flex items-center gap-5 mb-1">
                   <div className="w-4 flex-shrink-0" />
-                  <div className="flex-1"><span className="text-[10px] tracking-wider uppercase" style={dim}>Product</span></div>
-                  <div className="flex-shrink-0" style={{width:"60px", textAlign:"center"}}><span className="text-[10px] tracking-wider uppercase" style={dim}>Balance</span></div>
+                  <div className="flex-1 max-w-[460px]"><span className="text-[10px] tracking-wider uppercase" style={dim}>Product</span></div>
+                  <div className="flex-shrink-0 text-center" style={{width:"60px"}}><span className="text-[10px] tracking-wider uppercase" style={dim}>Balance</span></div>
                   <div className="flex-shrink-0 text-center" style={{width:"130px"}}><span className="text-[10px] tracking-wider uppercase" style={dim}>Order Qty</span></div>
                   <div className="w-[13px] flex-shrink-0" />
                 </div>
@@ -1341,7 +1341,7 @@ export default function StockChicNailspa() {
                           </span>
                         </div>
                         {/* Qty stepper */}
-                        <div className="flex items-center flex-shrink-0 h-[34px]" style={{ width: "130px", border: `1px solid ${borderActive}`, background: cardBg }}>
+                        <div className="flex items-center justify-between flex-shrink-0 h-[34px]" style={{ width: "130px", border: `1px solid ${borderActive}`, background: cardBg }}>
                           <button onClick={() => updateOrderEntry(entry.id, { qty: Math.max(1, entry.qty - 1) })}
                             className="px-2 py-2 transition-colors" style={dim}
                             onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
