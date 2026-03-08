@@ -371,6 +371,10 @@ function StockInner() {
   const [saveFlash, setSaveFlash] = useState(false);
   const [usageError, setUsageError] = useState<string | null>(null);
   const [orderError, setOrderError] = useState<string | null>(null);
+  const [pendingOrder, setPendingOrder] = useState<{ grn: string; date: string; entries: { productName: string; starting: number; qty: number; ending: number }[] } | null>(null);
+  const [orderConfirming, setOrderConfirming] = useState(false);
+  const [editingPendingIdx, setEditingPendingIdx] = useState<number | null>(null);
+  const [editingPendingQty, setEditingPendingQty] = useState("");
 
   const [stockSearch, setStockSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<AllFileProduct | null>(null);
@@ -712,11 +716,10 @@ function StockInner() {
       return { productName: e.productName, current, orderQty, ending: current + orderQty };
     });
 
-  const handleOrderSubmit = async () => {
+  const handleOrderSubmit = () => {
     const valid = orderEntries.filter(e => e.productName && e.qty > 0);
     if (!valid.length) return;
     setOrderError(null);
-    setOrderSubmitting(true);
 
     // Generate GRN: BOU DDMMYY based on selected date
     const orderDateObj = new Date(getDateStr(orderDate));
@@ -725,32 +728,45 @@ function StockInner() {
     const yy = String(orderDateObj.getFullYear()).slice(-2);
     const grn = `BOU ${dd}${mm}${yy}`;
 
+    const entries = valid.map(entry => {
+      const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
+      const starting = Number(product?.["BOUDOIR BALANCE"] ?? 0);
+      const qty = Number(entry.qty);
+      return { productName: entry.productName, starting, qty, ending: starting + qty };
+    });
+
+    setPendingOrder({ grn, date: getDateStr(orderDate), entries });
+    setShowOrderSummaryPanel(true);
+  };
+
+  const handleConfirmOrder = async () => {
+    if (!pendingOrder) return;
+    setOrderConfirming(true);
+    setOrderError(null);
     try {
-      for (const entry of valid) {
+      for (const entry of pendingOrder.entries) {
         const product = products.find(p => p["PRODUCT NAME"] === entry.productName);
-        const currentBranchBalance = Number(product?.["BOUDOIR BALANCE"] ?? 0);
-        const endingBranchBalance = currentBranchBalance + Number(entry.qty);
         const currentOfficeBalance = Number(product?.["OFFICE BALANCE"] ?? 0);
-        const endingOfficeBalance = currentOfficeBalance - Number(entry.qty);
+        const endingOfficeBalance = currentOfficeBalance - entry.qty;
 
         // Log to AllFileLog
         const { error: orderLogErr } = await (supabase as any).from("AllFileLog").insert({
-          "DATE": getDateStr(orderDate),
+          "DATE": pendingOrder.date,
           "PRODUCT NAME": entry.productName,
           "BRANCH": "Boudoir",
           "SUPPLIER": "Office",
           "TYPE": "Order",
-          "STARTING BALANCE": currentBranchBalance,
-          "QTY": Number(entry.qty),
-          "ENDING BALANCE": endingBranchBalance,
-          "GRN": grn,
+          "STARTING BALANCE": entry.starting,
+          "QTY": entry.qty,
+          "ENDING BALANCE": entry.ending,
+          "GRN": pendingOrder.grn,
           "OFFICE BALANCE": endingOfficeBalance,
         });
         if (orderLogErr) { console.error("AllFileLog order insert error:", orderLogErr); setOrderError(orderLogErr.message || "Log write failed — check console"); }
 
         // Update branch balance in AllFileProducts (ALL rows for this product)
         await (supabase as any).from("AllFileProducts")
-          .update({ "BOUDOIR BALANCE": endingBranchBalance })
+          .update({ "BOUDOIR BALANCE": entry.ending })
           .eq("PRODUCT NAME", entry.productName);
 
         // Update office balance in AllFileProducts (ALL rows for this product)
@@ -761,10 +777,11 @@ function StockInner() {
       await fetchProducts();
       await fetchLog();
       setOrderEntries(makeOrderEntries());
+      setPendingOrder(null);
       setOrderSuccess(true);
       setTimeout(() => setOrderSuccess(false), 3000);
-    } catch (err) { console.error("Order submit error:", err); }
-    setOrderSubmitting(false);
+    } catch (err) { console.error("Confirm order error:", err); }
+    setOrderConfirming(false);
   };
 
   const dim: React.CSSProperties = { color: "hsl(var(--muted-foreground))" };
@@ -1910,8 +1927,12 @@ function StockInner() {
               <div>
                 <h2 className="text-[22px] font-light tracking-tight">Order Summary</h2>
                 <p className="text-[11px] tracking-wider uppercase mt-1" style={dim}>
-                  {latestOrderDate === tomorrow ? "Tomorrow" : latestOrderDate === today ? "Today" : new Date(latestOrderDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                  {allTodayOrders.length > 0 && ` · ${allTodayOrders.length} ${allTodayOrders.length === 1 ? "item" : "items"}`}
+                  {pendingOrder
+                    ? new Date(pendingOrder.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+                    : latestOrderDate === tomorrow ? "Tomorrow" : latestOrderDate === today ? "Today" : new Date(latestOrderDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                  {pendingOrder
+                    ? ` · ${pendingOrder.entries.length} ${pendingOrder.entries.length === 1 ? "item" : "items"} · Pending`
+                    : allTodayOrders.length > 0 ? ` · ${allTodayOrders.length} ${allTodayOrders.length === 1 ? "item" : "items"}` : ""}
                 </p>
               </div>
               <button onClick={() => setShowOrderSummaryPanel(false)} style={dim}
@@ -1922,7 +1943,129 @@ function StockInner() {
             </div>
 
             {/* ── Most recent order (editable) ── */}
-            {allTodayOrders.length === 0 ? (
+            {pendingOrder !== null ? (
+              <>
+                <p className="text-[10px] tracking-wider uppercase mb-4" style={dim}>Pending confirmation · Click qty to edit · × to remove</p>
+                <table className="w-full border-collapse mb-8">
+                  <thead>
+                    <tr className="border-b" style={{ borderColor: "hsl(var(--border-active))" }}>
+                      <th className="label-uppercase font-normal text-left pb-3 pt-2">Product</th>
+                      <th className="label-uppercase font-normal text-center pb-3 pt-2">Prev Bal</th>
+                      <th className="label-uppercase font-normal text-center pb-3 pt-2">Order Qty</th>
+                      <th className="label-uppercase font-normal text-center pb-3 pt-2">New Bal</th>
+                      <th className="w-6" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingOrder.entries.map((entry, idx) => {
+                      const isEditing = editingPendingIdx === idx;
+                      const parsedEdit = parseInt(editingPendingQty);
+                      const previewBal = isEditing && !isNaN(parsedEdit) ? entry.starting + parsedEdit : entry.ending;
+                      return (
+                        <tr key={idx} className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
+                          <td className="text-[13px] font-light py-3">{entry.productName}</td>
+                          <td className="text-[13px] font-light py-3 text-center" style={dim}>{entry.starting}</td>
+                          <td className="text-[13px] font-light py-3 text-center">
+                            {isEditing ? (
+                              <input
+                                autoFocus
+                                type="number"
+                                min={1}
+                                className="text-[13px] font-light text-center bg-transparent outline-none border-b w-[40px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                style={{ borderColor: "hsl(var(--border-active))", color: "hsl(var(--green))" }}
+                                value={editingPendingQty}
+                                onChange={e => setEditingPendingQty(e.target.value)}
+                                onClick={e => (e.target as HTMLInputElement).select()}
+                                onBlur={() => {
+                                  if (!isNaN(parsedEdit) && parsedEdit > 0) {
+                                    setPendingOrder(prev => {
+                                      if (!prev) return prev;
+                                      const entries = [...prev.entries];
+                                      entries[idx] = { ...entries[idx], qty: parsedEdit, ending: entries[idx].starting + parsedEdit };
+                                      return { ...prev, entries };
+                                    });
+                                  }
+                                  setEditingPendingIdx(null);
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                                  if (e.key === "Escape") setEditingPendingIdx(null);
+                                }}
+                              />
+                            ) : (
+                              <span
+                                className="cursor-pointer"
+                                style={{ color: "hsl(var(--green))" }}
+                                title="Click to edit"
+                                onClick={() => { setEditingPendingIdx(idx); setEditingPendingQty(String(entry.qty)); }}
+                                onMouseEnter={e => (e.currentTarget.style.textDecoration = "underline")}
+                                onMouseLeave={e => (e.currentTarget.style.textDecoration = "none")}
+                              >+{entry.qty}</span>
+                            )}
+                          </td>
+                          <td className="text-[13px] font-light py-3 text-center" style={isEditing ? dim : {}}>{previewBal}</td>
+                          <td className="py-3 text-center">
+                            <button
+                              onClick={() => setPendingOrder(prev => {
+                                if (!prev) return prev;
+                                const entries = prev.entries.filter((_, i) => i !== idx);
+                                return entries.length ? { ...prev, entries } : null;
+                              })}
+                              style={dim}
+                              onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
+                              onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                            ><X size={13} /></button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                {/* Notes */}
+                <div className="mb-6 mt-2">
+                  <p className="text-[10px] tracking-wider uppercase mb-2" style={{ color: "hsl(var(--muted-foreground))" }}>Add Notes</p>
+                  <textarea
+                    rows={3}
+                    className="w-full bg-transparent outline-none text-[13px] font-light resize-none"
+                    style={{ borderBottom: "1px solid hsl(var(--border-active))", padding: "6px 0", color: "hsl(var(--foreground))" }}
+                    placeholder="Example: No Argan Stock..."
+                    value={grnNotes}
+                    onChange={e => setGrnNotes(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-6 mb-12">
+                  <button
+                    onClick={generateGRNPdf}
+                    className="flex items-center gap-2 text-[11px] tracking-wider uppercase transition-colors"
+                    style={{ color: "hsl(var(--muted-foreground))" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                  >
+                    <FileText size={12} />
+                    GRN
+                  </button>
+                  <button
+                    onClick={exportToExcel}
+                    className="flex items-center gap-2 text-[11px] tracking-wider uppercase transition-colors"
+                    style={{ color: "hsl(var(--muted-foreground))" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                  >
+                    <Download size={12} />
+                    Export to Excel
+                  </button>
+                  <button
+                    onClick={handleConfirmOrder}
+                    disabled={orderConfirming}
+                    className="flex items-center gap-2 text-[11px] tracking-wider uppercase"
+                    style={{ background: "hsl(var(--foreground))", color: "hsl(var(--background))", padding: "6px 12px", borderRadius: "5px", opacity: orderConfirming ? 0.5 : 1 }}
+                  >
+                    {orderConfirming ? "Confirming..." : "Confirm Order"}
+                  </button>
+                </div>
+              </>
+            ) : allTodayOrders.length === 0 ? (
               <p className="text-[13px]" style={dim}>No orders submitted yet.</p>
             ) : (
               <>
