@@ -309,7 +309,7 @@ function DatePicker({ value, onChange }: {
       <button
         onClick={() => setOpen(o => !o)}
         className="flex items-center gap-1.5 h-[28px] px-3 text-[11px] tracking-wider uppercase transition-colors"
-        style={{ border: `1px solid ${value !== "today" ? borderActive : border}`, background: cardBg, color: value !== "today" ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))" }}
+        style={{ border: `1px solid ${borderActive}`, background: cardBg, color: "hsl(var(--foreground))", borderRadius: "5px" }}
       >
         {OPTIONS.find(o => o.value === value)?.label}
         <ChevronDown size={10} />
@@ -317,7 +317,7 @@ function DatePicker({ value, onChange }: {
       {open && (
         <div
           className="absolute top-full right-0 z-50 border mt-0.5"
-          style={{ background: "hsl(var(--popover))", borderColor: borderActive, minWidth: "110px" }}
+          style={{ background: "hsl(var(--popover))", borderColor: borderActive, minWidth: "110px", borderRadius: "5px" }}
         >
           {OPTIONS.map(opt => (
             <div
@@ -325,7 +325,7 @@ function DatePicker({ value, onChange }: {
               className="px-3 py-2 text-[11px] tracking-wider uppercase cursor-pointer transition-colors"
               style={{
                 borderBottom: `1px solid ${border}`,
-                color: value === opt.value ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+                color: "hsl(var(--foreground))",
                 background: value === opt.value ? cardBg : "transparent",
               }}
               onMouseDown={() => { onChange(opt.value); setOpen(false); }}
