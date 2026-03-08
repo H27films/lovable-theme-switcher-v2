@@ -1319,7 +1319,7 @@ function StockNurYadiInner() {
                   onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
                   <Plus size={11} /> Add another product
                 </button>
-                <button onClick={handleSubmit} disabled={submitting} className="minimal-btn" style={ background: "hsl(var(--foreground))", color: "hsl(var(--background))", opacity: submitting ? 0.5 : 1 }>
+                <button onClick={handleSubmit} disabled={submitting} className="minimal-btn" style={{ background: "hsl(var(--foreground))", color: "hsl(var(--background))", opacity: submitting ? 0.5 : 1 }}>
                   {submitting ? "Saving..." : "Submit"}
                 </button>
                 {submitSuccess && (
@@ -1424,7 +1424,7 @@ function StockNurYadiInner() {
                   onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}>
                   <Plus size={11} /> Add another product
                 </button>
-                <button onClick={handleOrderSubmit} disabled={orderSubmitting} className="minimal-btn" style={ background: "hsl(var(--foreground))", color: "hsl(var(--background))", opacity: orderSubmitting ? 0.5 : 1 }>
+                <button onClick={handleOrderSubmit} disabled={orderSubmitting} className="minimal-btn" style={{ background: "hsl(var(--foreground))", color: "hsl(var(--background))", opacity: orderSubmitting ? 0.5 : 1 }}>
                   {orderSubmitting ? "Saving..." : "Submit Order"}
                 </button>
                 {orderSuccess && (
