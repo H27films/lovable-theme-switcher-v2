@@ -103,6 +103,7 @@ const Index = () => {
   const [allActivityLoading, setAllActivityLoading] = useState(false);
   const [expandedGRNs, setExpandedGRNs] = useState<Set<string>>(new Set());
   const [selectedBranch, setSelectedBranch] = useState<"Office" | "Boudoir" | "Nur Yadi" | "Chic Nailspa">("Office");
+  const [hoveredBranch, setHoveredBranch] = useState<string | null>(null);
   const [branchActivity, setBranchActivity] = useState<AllFileLogRow[]>([]);
   const [branchActivityLoading, setBranchActivityLoading] = useState(false);
   const [expandedBranchDates, setExpandedBranchDates] = useState<Set<string>>(new Set());
@@ -800,14 +801,14 @@ const Index = () => {
                       onClick={() => { setSelectedBranch(branch); setExpandedBranchDates(new Set()); setExpandedGRNs(new Set()); setSelectedBranchProduct(null); }}
                       className="transition-all duration-200"
                       style={{
-                        fontSize: selectedBranch === branch ? "15px" : "12px",
+                        fontSize: selectedBranch === branch ? "15px" : hoveredBranch === branch ? "13px" : "12px",
                         fontWeight: 300,
                         letterSpacing: "0.08em",
                         textTransform: "uppercase",
-                        color: selectedBranch === branch ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+                        color: selectedBranch === branch || hoveredBranch === branch ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
                       }}
-                      onMouseEnter={e => { if (selectedBranch !== branch) { e.currentTarget.style.color = "hsl(var(--foreground))"; e.currentTarget.style.fontSize = "15px"; } }}
-                      onMouseLeave={e => { if (selectedBranch !== branch) { e.currentTarget.style.color = "hsl(var(--muted-foreground))"; e.currentTarget.style.fontSize = "12px"; } }}
+                      onMouseEnter={() => setHoveredBranch(branch)}
+                      onMouseLeave={() => setHoveredBranch(null)}
                     >
                       {branch}
                     </button>
