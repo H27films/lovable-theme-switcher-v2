@@ -800,13 +800,14 @@ const Index = () => {
                       onClick={() => { setSelectedBranch(branch); setExpandedBranchDates(new Set()); setExpandedGRNs(new Set()); setSelectedBranchProduct(null); }}
                       className="transition-all duration-200"
                       style={{
-                        fontSize: selectedBranch === branch ? "22px" : "18px",
+                        fontSize: selectedBranch === branch ? "18px" : "14px",
                         fontWeight: 300,
-                        letterSpacing: "-0.02em",
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
                         color: selectedBranch === branch ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
                       }}
-                      onMouseEnter={e => { if (selectedBranch !== branch) { e.currentTarget.style.color = "hsl(var(--foreground))"; e.currentTarget.style.fontSize = "20px"; } }}
-                      onMouseLeave={e => { if (selectedBranch !== branch) { e.currentTarget.style.color = "hsl(var(--muted-foreground))"; e.currentTarget.style.fontSize = "18px"; } }}
+                      onMouseEnter={e => { if (selectedBranch !== branch) { e.currentTarget.style.color = "hsl(var(--foreground))"; e.currentTarget.style.fontSize = "16px"; } }}
+                      onMouseLeave={e => { if (selectedBranch !== branch) { e.currentTarget.style.color = "hsl(var(--muted-foreground))"; e.currentTarget.style.fontSize = "14px"; } }}
                     >
                       {branch}
                     </button>
