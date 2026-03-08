@@ -1562,50 +1562,6 @@ function StockNurYadiInner() {
                   </div>
                 )}
 
-                {/* Submitted Orders — today only, with reverse button */}
-                {todayOrders.length > 0 && orderSummary.length === 0 && (
-                  <div className="mt-10">
-                    <div className="mb-5">
-                      <h2 className="text-[22px] font-light tracking-tight">Order Summary</h2>
-                      <p className="text-[11px] tracking-wider uppercase mt-1" style={dim}>
-                        {latestOrderDate === tomorrow ? "Tomorrow's order" : latestOrderDate === today ? "Submitted today" : new Date(latestOrderDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} — click × to reverse
-                      </p>
-                    </div>
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b" style={{ borderColor: borderActive }}>
-                          <th className="label-uppercase font-normal text-left pb-3 pt-2">Product</th>
-                          <th className="label-uppercase font-normal text-center pb-3 pt-2">Starting Bal</th>
-                          <th className="label-uppercase font-normal text-center pb-3 pt-2">Order Qty</th>
-                          <th className="label-uppercase font-normal text-center pb-3 pt-2">Ending Bal</th>
-                          <th className="w-6" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {todayOrders.map(row => (
-                          <tr key={row.id} className="border-b table-row-hover" style={{ borderColor: border }}>
-                            <td className="text-[13px] font-light py-3">{row["PRODUCT NAME"]}</td>
-                            <td className="text-[13px] font-light py-3 text-center" style={dim}>{row["STARTING BALANCE"]}</td>
-                            <td className="text-[13px] font-light py-3 text-center" style={{ color: "hsl(var(--green))" }}>{row.QTY > 0 ? "+" : ""}{row.QTY}</td>
-                            <td className="text-[13px] font-light py-3 text-center">{row["ENDING BALANCE"]}</td>
-                            <td className="py-3 text-center">
-                              <button
-                                onClick={() => reverseOrder(row)}
-                                disabled={reversing === row.id}
-                                className="transition-colors"
-                                style={{ color: "hsl(var(--muted-foreground))", opacity: reversing === row.id ? 0.4 : 1 }}
-                                onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
-                                onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
-                              >
-                                <X size={13} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
 
                 {/* Recent Orders */}
                 <div className="mt-10">
@@ -2133,112 +2089,29 @@ function StockNurYadiInner() {
             )}
 
             {/* ── Most recent order (editable) ── */}
-            {allTodayOrders.length === 0 ? (
-              <p className="text-[13px]" style={dim}>No orders submitted yet.</p>
-            ) : (
-              <>
-                <p className="text-[10px] tracking-wider uppercase mb-4" style={dim}>Click qty to edit · × to remove line</p>
-                <table className="w-full border-collapse mb-8">
-                  <thead>
-                    <tr className="border-b" style={{ borderColor: "hsl(var(--border-active))" }}>
-                      <th className="label-uppercase font-normal text-left pb-3 pt-2">Product</th>
-                      <th className="label-uppercase font-normal text-center pb-3 pt-2">Prev Bal</th>
-                      <th className="label-uppercase font-normal text-center pb-3 pt-2">Order Qty</th>
-                      <th className="label-uppercase font-normal text-center pb-3 pt-2">New Bal</th>
-                      <th className="w-6" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allTodayOrders.map(row => {
-                      const isEditing = editingOrderRow === row.id;
-                      const isSaving = savingOrderEdit === row.id;
-                      const parsedEdit = parseInt(editingOrderQty);
-                      const previewBal = isEditing && !isNaN(parsedEdit)
-                        ? row["STARTING BALANCE"] + parsedEdit
-                        : row["ENDING BALANCE"];
-                      return (
-                        <tr key={row.id} className="border-b" style={{ borderColor: "hsl(var(--border))", opacity: isSaving ? 0.4 : 1, transition: "opacity 0.15s" }}>
-                          <td className="text-[13px] font-light py-3">{row["PRODUCT NAME"]}</td>
-                          <td className="text-[13px] font-light py-3 text-center" style={dim}>{row["STARTING BALANCE"]}</td>
-                          <td className="text-[13px] font-light py-3 text-center">
-                            {isEditing ? (
-                              <input
-                                autoFocus
-                                type="number"
-                                min={1}
-                                className="text-[13px] font-light text-center bg-transparent outline-none border-b w-[40px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                style={{ borderColor: "hsl(var(--border-active))", color: "hsl(var(--green))" }}
-                                value={editingOrderQty}
-                                onChange={e => setEditingOrderQty(e.target.value)}
-                                onClick={e => (e.target as HTMLInputElement).select()}
-                                onBlur={() => handleOrderQtyEdit(row, parsedEdit)}
-                                onKeyDown={e => {
-                                  if (e.key === "Enter") handleOrderQtyEdit(row, parsedEdit);
-                                  if (e.key === "Escape") setEditingOrderRow(null);
-                                }}
-                              />
-                            ) : (
-                              <span
-                                className="cursor-pointer"
-                                style={{ color: "hsl(var(--green))" }}
-                                title="Click to edit"
-                                onClick={() => { setEditingOrderRow(row.id); setEditingOrderQty(String(row.QTY)); }}
-                                onMouseEnter={e => (e.currentTarget.style.textDecoration = "underline")}
-                                onMouseLeave={e => (e.currentTarget.style.textDecoration = "none")}
-                              >+{row.QTY}</span>
-                            )}
-                          </td>
-                          <td className="text-[13px] font-light py-3 text-center" style={isEditing ? dim : {}}>{previewBal}</td>
-                          <td className="py-3 text-center">
-                            <button
-                              onClick={() => handleOrderRowDelete(row)}
-                              disabled={isSaving}
-                              style={dim}
-                              onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--red))")}
-                              onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
-                            ><X size={13} /></button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-
-                {/* Notes */}
-                <div className="mb-6 mt-2">
-                  <p className="text-[10px] tracking-wider uppercase mb-2" style={{ color: "hsl(var(--muted-foreground))" }}>Add Notes</p>
-                  <textarea
-                    rows={3}
-                    className="w-full bg-transparent outline-none text-[13px] font-light resize-none"
-                    style={{ borderBottom: "1px solid hsl(var(--border-active))", padding: "6px 0", color: "hsl(var(--foreground))" }}
-                    placeholder="Example: No Argan Stock..."
-                    value={grnNotes}
-                    onChange={e => setGrnNotes(e.target.value)}
-                  />
-                </div>
-                <div className="flex items-center gap-6 mb-12">
-                  <button
-                    onClick={generateGRNPdf}
-                    className="flex items-center gap-2 text-[11px] tracking-wider uppercase transition-colors"
-                    style={{ color: "hsl(var(--muted-foreground))" }}
-                    onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
-                    onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
-                  >
-                    <FileText size={12} />
-                    GRN
-                  </button>
-                  <button
-                    onClick={exportToExcel}
-                    className="flex items-center gap-2 text-[11px] tracking-wider uppercase transition-colors"
-                    style={{ color: "hsl(var(--muted-foreground))" }}
-                    onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
-                    onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
-                  >
-                    <Download size={12} />
-                    Export to Excel
-                  </button>
-                </div>
-              </>
+            {allTodayOrders.length > 0 && (
+              <div className="flex items-center gap-6 mb-12">
+                <button
+                  onClick={generateGRNPdf}
+                  className="flex items-center gap-2 text-[11px] tracking-wider uppercase transition-colors"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                >
+                  <FileText size={12} />
+                  GRN
+                </button>
+                <button
+                  onClick={exportToExcel}
+                  className="flex items-center gap-2 text-[11px] tracking-wider uppercase transition-colors"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+                >
+                  <Download size={12} />
+                  Export to Excel
+                </button>
+              </div>
             )}
 
             {/* ── All Orders ── */}
@@ -2280,8 +2153,9 @@ function StockNurYadiInner() {
                         {expandedGRNs.has(group.key) && group.rows.map((row, ri) => (
                           <tr key={row.id} className="border-b" style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}>
                             <td className="text-[12px] font-light py-2.5 pl-2" style={dim}>—</td>
-                            <td className="text-[13px] font-light py-2.5" colSpan={2}>{row["PRODUCT NAME"]}</td>
+                            <td className="text-[13px] font-light py-2.5">{row["PRODUCT NAME"]}</td>
                             <td className="text-[12px] font-light py-2.5 text-center" style={{ color: "hsl(var(--green))" }}>+{row.QTY}</td>
+                            <td className="text-[12px] font-light py-2.5 text-center" style={dim}>{row["ENDING BALANCE"]}</td>
                           </tr>
                         ))}
                       </>
