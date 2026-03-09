@@ -1227,10 +1227,10 @@ const Index = () => {
           </div>
 
           {/* ── Search bar ── */}
+          <div style={fade(170)}>
           <div
             ref={searchRef}
             className="relative mb-12"
-            style={fade(170)}
             onMouseEnter={() => setSearchHovered(true)}
             onMouseLeave={() => setSearchHovered(false)}
           >
@@ -1336,6 +1336,7 @@ const Index = () => {
                 })}
               </div>
             )}
+          </div>
           </div>
 
           {/* ── Tab switcher ── */}
