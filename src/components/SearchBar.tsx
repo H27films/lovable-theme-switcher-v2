@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Search } from "lucide-react";
 import { type ProductRow } from "@/hooks/usePriceLookup";
 
 interface SearchBarProps {
@@ -10,8 +11,13 @@ export default function SearchBar({ data, onSelect }: SearchBarProps) {
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [focused, setFocused] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const expanded = hovered || focused || value.length > 0;
 
   const matches = value.trim()
   ? data.filter(d => d.name.toLowerCase().includes(value.trim().toLowerCase())).slice(0, 10)
@@ -19,18 +25,19 @@ export default function SearchBar({ data, onSelect }: SearchBarProps) {
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setFocused(false);
+      }
     };
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
   }, []);
 
-  // Reset active index when matches change
   useEffect(() => {
     setActiveIndex(-1);
   }, [value]);
 
-  // Scroll active item into view
   useEffect(() => {
     if (activeIndex >= 0 && listRef.current) {
       const items = listRef.current.querySelectorAll("[data-item]");
@@ -55,10 +62,13 @@ export default function SearchBar({ data, onSelect }: SearchBarProps) {
         setValue("");
         setOpen(false);
         setActiveIndex(-1);
+        setFocused(false);
       }
     } else if (e.key === "Escape") {
       setOpen(false);
       setActiveIndex(-1);
+      setFocused(false);
+      inputRef.current?.blur();
     }
   };
 
@@ -75,18 +85,44 @@ export default function SearchBar({ data, onSelect }: SearchBarProps) {
   };
 
   return (
-    <div ref={wrapRef} className="relative mb-10">
-      <span className="label-uppercase block mb-2.5 text-xs tracking-[0.2em]">Search Product</span>
-      <input
-        type="text"
-        className="minimal-input text-2xl font-light py-3"
-        placeholder="Type product name..."
-        value={value}
-        onChange={e => { setValue(e.target.value); setOpen(!!e.target.value.trim()); }}       
-        onKeyDown={handleKeyDown}
-        aria-autocomplete="list"
-        aria-expanded={open}
-      />
+    <div
+      ref={wrapRef}
+      className="relative mb-10"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div
+        className="flex items-center gap-2 cursor-pointer pb-2 relative"
+        onClick={() => { setFocused(true); setTimeout(() => inputRef.current?.focus(), 50); }}
+      >
+        <Search size={18} strokeWidth={1.5} className={`transition-colors duration-300 ${hovered || expanded ? "text-muted-foreground" : "text-foreground"}`} />
+        {!expanded && (
+          <span className={`text-[15px] font-light transition-colors duration-300 ${hovered ? "text-muted-foreground" : "text-foreground"}`}>Search</span>
+        )}
+        {expanded && (
+          <input
+            ref={inputRef}
+            type="text"
+            className="flex-1 bg-transparent outline-none text-[15px] font-light"
+            placeholder="Search"
+            value={value}
+            onChange={e => { setValue(e.target.value); setOpen(!!e.target.value.trim()); }}
+            onFocus={() => setFocused(true)}
+            onKeyDown={handleKeyDown}
+            aria-autocomplete="list"
+            aria-expanded={open}
+          />
+        )}
+        {/* Animated underline */}
+        <span
+          className="absolute bottom-0 left-0 h-px transition-all duration-[600ms] ease-out"
+          style={{
+            background: "hsl(var(--border-active))",
+            width: hovered || expanded ? "100%" : "0%",
+          }}
+        />
+      </div>
+
       {open && matches.length > 0 && (
         <div ref={listRef} className="absolute top-full left-0 right-0 dropdown-menu-custom max-h-60 overflow-y-auto z-50 scrollbar-thin">
           {matches.map((d, i) => (
@@ -94,7 +130,7 @@ export default function SearchBar({ data, onSelect }: SearchBarProps) {
               key={d.name}
               data-item
               className={`dropdown-item-custom ${i === activeIndex ? "bg-card text-foreground" : ""}`}
-              onClick={() => { onSelect(d); setValue(""); setOpen(false); setActiveIndex(-1); }}
+              onClick={() => { onSelect(d); setValue(""); setOpen(false); setActiveIndex(-1); setFocused(false); }}
               onMouseEnter={() => setActiveIndex(i)}
             >
               <span>{highlight(d.name)}</span>
