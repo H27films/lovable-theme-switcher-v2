@@ -1185,14 +1185,27 @@ function StockChicNailspaPhoneInner() {
 
   return (
     <div className="min-h-[100dvh]" style={{ background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
-      <div className="max-w-[900px] mx-auto px-5">
+      <div className="max-w-full mx-auto px-3">
+        {/* ── Search blur overlay ── */}
+        <div
+          style={{
+            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+            backdropFilter: stockSearchFocused ? "blur(4px)" : "blur(0px)",
+            WebkitBackdropFilter: stockSearchFocused ? "blur(4px)" : "blur(0px)",
+            opacity: stockSearchFocused ? 1 : 0,
+            transition: "opacity 300ms ease, backdrop-filter 300ms ease, -webkit-backdrop-filter 300ms ease",
+            zIndex: 30,
+            pointerEvents: "none",
+          }}
+        />
+
         {/* Top bar */}
-        <div className="flex justify-between items-center py-2 border-b" style={{ borderColor: border, ...fade(0) }}>
+        <div className="flex justify-between items-center py-3 border-b" style={{ borderColor: border, position: "relative", zIndex: 35, ...fade(0) }}>
           <span
-            className="text-[11px] tracking-[0.2em] uppercase"
+            className="text-[16px] font-light tracking-[0.25em] uppercase"
             style={{ color: "hsl(var(--foreground))" }}
           >
-            Chic Nailspa
+            CHIC NAILSPA
           </span>
           <div className="flex items-center gap-4">
             <ThemeToggle theme={theme} toggle={toggle} font={font} cycleFont={cycleFont} />
@@ -1215,17 +1228,22 @@ function StockChicNailspaPhoneInner() {
           </div>
         </div>
 
-        <div className="py-2">
+        {/* ── Date just below header ── */}
+        <div className="pt-2 pb-0" style={fade(90)}>
+          <h1 className="text-[11px] [font-variant-numeric:lining-nums] font-normal tracking-[0.2em] uppercase text-dim pl-0">{new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long" })}</h1>
+        </div>
+
+        <div className="py-6">
 
           {/* ── SECTION 1: Chic Nailspa Stock ── */}
           <div className="mb-4">
 
             {/* Stock search bar with hover underline */}
             <div
-              style={{...fade(170), position: "relative", zIndex: 40, marginTop: "16px"}}
+              style={{...fade(170), position: "relative", zIndex: 40}}
             >
               <div
-                className="relative mb-6"
+                className="relative mb-12"
                 onMouseEnter={() => setStockSearchHovered(true)}
               onMouseLeave={() => setStockSearchHovered(false)}
             >

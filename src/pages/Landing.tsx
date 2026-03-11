@@ -42,6 +42,22 @@ const PhoneIcon = () => (
   </svg>
 );
 
+// Letter-lift hover component — each character lifts individually with staggered delay
+// intro=true adds the l3-intro class which plays the lift animation once on load
+const HoverText = ({ text, staggerMs = 28 }: { text: string; staggerMs?: number }) => (
+  <span className="l3-hover-word">
+    {text.split("").map((char, i) => (
+      <span
+        key={i}
+        className="l3-char"
+        style={{ transitionDelay: `${i * staggerMs}ms` }}
+      >
+        {char}
+      </span>
+    ))}
+  </span>
+);
+
 export default function Landing() {
   const navigate = useNavigate();
   const { theme, setTheme, font, setFont } = useTheme();
@@ -60,6 +76,8 @@ export default function Landing() {
     const t = setTimeout(() => setVisible(true), 80);
     return () => clearTimeout(t);
   }, []);
+
+
 
   const togglePhoneMode = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -94,6 +112,20 @@ export default function Landing() {
           to   { opacity: 1; }
         }
 
+        /* ── Letter-lift hover ── */
+        .l3-hover-word {
+          display: inline-block;
+          cursor: default;
+        }
+        .l3-char {
+          display: inline-block;
+          transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .l3-hover-word:hover .l3-char {
+          transform: translateY(-8px);
+        }
+
+
         .l3-b-item {
           opacity: 0;
           transform: translateY(12px);
@@ -108,7 +140,7 @@ export default function Landing() {
 
         .l3-b-text {
           display: block;
-          font-size: clamp(16px, 2vw, 22px);
+          font-size: clamp(14px, 2vw, 22px);
           font-weight: 300;
           letter-spacing: 0.12em;
           text-transform: uppercase;
@@ -128,7 +160,7 @@ export default function Landing() {
 
         .l3-nav-item {
           display: block;
-          font-size: clamp(12px, 1.3vw, 15px);
+          font-size: clamp(10px, 1.3vw, 15px);
           font-weight: 400;
           letter-spacing: 0.18em;
           text-transform: uppercase;
@@ -197,6 +229,19 @@ export default function Landing() {
           transform: scale(1.15);
         }
         .l3-mode-toggle:focus { outline: none; }
+
+        /* ── Mobile tweaks ── */
+        @media (max-width: 480px) {
+          .l3-topbar { padding: 18px 24px 0 !important; }
+          .l3-hero   { padding: 0 24px !important; }
+          .l3-bottom { padding: 16px 24px !important; }
+          .l3-topbar-gap { gap: 16px !important; }
+          .l3-select-label { font-size: 8px !important; letter-spacing: 0.12em !important; white-space: nowrap !important; }
+          .l3-b-text { font-size: 13px !important; }
+          .l3-nav-item { font-size: 10px !important; }
+          .l3-hover-word:hover .l3-char { transform: translateY(-5px); }
+          @keyframes l3LiftChar { 45% { transform: translateY(-5px); } }
+        }
       `}</style>
 
       <div
@@ -214,6 +259,7 @@ export default function Landing() {
       >
         {/* Top bar */}
         <div
+          className="l3-topbar"
           style={{
             display: "flex",
             justifyContent: "space-between",
@@ -228,7 +274,7 @@ export default function Landing() {
         >
           <span
             style={{
-              fontSize: "11px",
+              fontSize: "clamp(9px, 2vw, 11px)",
               letterSpacing: "0.22em",
               textTransform: "uppercase",
               color: "hsl(var(--foreground))",
@@ -242,6 +288,7 @@ export default function Landing() {
           </span>
 
           <div
+            className="l3-topbar-gap"
             style={{
               display: "flex",
               alignItems: "center",
@@ -347,19 +394,19 @@ export default function Landing() {
 
         {/* Hero title */}
         <div
+          className="l3-hero"
           style={{
             flex: 1,
             display: "flex",
             alignItems: "center",
             padding: "0 44px",
-            pointerEvents: "none",
             position: "relative",
             zIndex: 1,
           }}
         >
           <h1
             style={{
-              fontSize: "70px",
+              fontSize: "clamp(42px, 11vw, 70px)",
               fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
               fontWeight: 300,
               letterSpacing: "-0.03em",
@@ -369,10 +416,11 @@ export default function Landing() {
               transform: visible ? "translateY(0)" : "translateY(20px)",
               transition: "opacity 1.4s cubic-bezier(0.16,1,0.3,1) 0.4s, transform 1.4s cubic-bezier(0.16,1,0.3,1) 0.4s",
               filter: branchesOpen ? blurAmount : "none",
+              userSelect: "none",
             }}
           >
             <span style={{ color: "hsl(var(--foreground))", display: "block", transition: "filter 0.4s ease, opacity 0.4s ease" }}>
-              Product
+              <HoverText text="Product" />
             </span>
             <span
               style={{
@@ -381,13 +429,14 @@ export default function Landing() {
                 transition: "color 0.4s ease",
               }}
             >
-              Database.
+              <HoverText text="Database." />
             </span>
           </h1>
         </div>
 
         {/* Bottom bar */}
         <div
+          className="l3-bottom"
           style={{
             flexShrink: 0,
             borderTop: "1px solid hsl(var(--border))",
@@ -447,7 +496,7 @@ export default function Landing() {
               className="l3-nav-item"
               onClick={(e) => {
                 e.stopPropagation();
-                navigate("/prices");
+                navigate(phoneMode ? "/office/mobile" : "/prices");
               }}
               style={{
                 marginTop: "14px",
@@ -474,11 +523,13 @@ export default function Landing() {
             }}
           >
             <span
+              className="l3-select-label"
               style={{
                 fontSize: "10px",
                 letterSpacing: "0.25em",
                 textTransform: "uppercase",
                 color: "hsl(var(--muted-foreground))",
+                whiteSpace: "nowrap",
               }}
             >
               Select to continue
