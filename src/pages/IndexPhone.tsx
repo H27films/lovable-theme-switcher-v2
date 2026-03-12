@@ -241,8 +241,10 @@ const IndexPhone = () => {
 
   // Order panel state
   const [showOrderPanel, setShowOrderPanel] = useState(false);
-  const [summaryExpanded, setSummaryExpanded] = useState(false);
-  const [arrowProgress, setArrowProgress] = useState(0);
+  const [summaryProgress, setSummaryProgress] = useState(0);
+  const [panelScrollDir, setPanelScrollDir] = useState<"up" | "down">("down");
+  const panelPrevScrollTop = React.useRef(0);
+  const [summarySpacerHeight, setSummarySpacerHeight] = useState(0);
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -282,7 +284,7 @@ const IndexPhone = () => {
   const listRef = useRef<HTMLDivElement>(null);
   const supplierDropdownRef = useRef<HTMLDivElement>(null);
   const panelScrollRef = useRef<HTMLDivElement>(null);
-  const summaryOverlayRef = useRef<HTMLDivElement>(null);
+  const summaryInlineRef = useRef<HTMLDivElement>(null);
   const [showNewProductSupplierDropdown, setShowNewProductSupplierDropdown] = useState(false);
   const newProductSupplierRef = useRef<HTMLDivElement>(null);
 
@@ -945,24 +947,43 @@ const IndexPhone = () => {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
-  // Panel scroll → expand order summary overlay
+  // Scroll-driven fade+scale for inline ORDER SUMMARY
   useEffect(() => {
-    const el = panelScrollRef.current;
-    if (!el || !showOrderPanel) return;
+    if (!showOrderPanel) { setSummaryProgress(0); return; }
+    const panel = panelScrollRef.current;
+    const summary = summaryInlineRef.current;
+    if (!panel || !summary) return;
     const handleScroll = () => {
-      setArrowProgress(Math.min(1, el.scrollTop / 80));
-      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
-        setSummaryExpanded(true);
-      }
+      const scrollTop = panel.scrollTop;
+      // track panel scroll direction
+      if (scrollTop > panelPrevScrollTop.current) setPanelScrollDir("down");
+      else if (scrollTop < panelPrevScrollTop.current) setPanelScrollDir("up");
+      panelPrevScrollTop.current = scrollTop;
+      if (scrollTop === 0) { setSummaryProgress(0); return; }
+      // progress: 0 when not scrolled, 1 when summary.offsetTop reached (summary at panel top)
+      const summaryTop = summary.offsetTop;
+      const progress = summaryTop > 0 ? scrollTop / summaryTop : 0;
+      setSummaryProgress(Math.min(1, Math.max(0, progress)));
     };
-    el.addEventListener('scroll', handleScroll);
-    return () => el.removeEventListener('scroll', handleScroll);
-  }, [showOrderPanel]);
+    panel.addEventListener('scroll', handleScroll);
+    handleScroll();
+    return () => panel.removeEventListener('scroll', handleScroll);
+  }, [showOrderPanel, orderLines]);
 
-  // Reset summaryExpanded when panel closes
+  // Dynamic spacer: allows ORDER SUMMARY to reach top but no over-scroll
   useEffect(() => {
-    if (!showOrderPanel) { setSummaryExpanded(false); setArrowProgress(0); }
-  }, [showOrderPanel]);
+    if (!showOrderPanel || !panelScrollRef.current || !summaryInlineRef.current) return;
+    const calc = () => {
+      const panelH = panelScrollRef.current!.clientHeight;
+      const sumH = summaryInlineRef.current!.clientHeight;
+      setSummarySpacerHeight(Math.max(0, panelH - sumH));
+    };
+    calc();
+    const obs = new ResizeObserver(calc);
+    obs.observe(panelScrollRef.current!);
+    obs.observe(summaryInlineRef.current!);
+    return () => obs.disconnect();
+  }, [showOrderPanel, orderLines]);
 
 
   useEffect(() => {
@@ -2547,6 +2568,25 @@ const IndexPhone = () => {
             style={{ background: "hsl(var(--background))", borderLeft: `1px solid hsl(var(--border))` }}
             onClick={e => e.stopPropagation()}
           >
+            {/* NEW ORDER content — blurs + shrinks as ORDER SUMMARY scrolls in */}
+            <div
+              style={{
+                transform: `scale(${1 - summaryProgress * 0.20})`,
+                transformOrigin: "top center",
+                transition: "filter 0.1s ease, transform 0.1s ease, mask-image 0.1s ease, WebkitMaskImage 0.1s ease",
+                filter: summaryProgress > 0 ? `blur(${summaryProgress * 4}px)` : "none",
+                WebkitMaskImage: summaryProgress > 0
+                  ? panelScrollDir === "down"
+                    ? `linear-gradient(to bottom, black 0%, black ${Math.max(0, 85 - summaryProgress * 90)}%, transparent 100%)`
+                    : `linear-gradient(to top, black 0%, black ${Math.max(0, 85 - summaryProgress * 90)}%, transparent 100%)`
+                  : "none",
+                maskImage: summaryProgress > 0
+                  ? panelScrollDir === "down"
+                    ? `linear-gradient(to bottom, black 0%, black ${Math.max(0, 85 - summaryProgress * 90)}%, transparent 100%)`
+                    : `linear-gradient(to top, black 0%, black ${Math.max(0, 85 - summaryProgress * 90)}%, transparent 100%)`
+                  : "none",
+              }}
+            >
             {/* Panel header */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-[16px] font-light tracking-[0.15em] uppercase">New Order</h2>
@@ -2822,7 +2862,7 @@ const IndexPhone = () => {
                   )}
 
                   {/* Scroll hint — rendered as fixed overlay below */}
-                  {orderLines.length > 0 && <div style={{ paddingBottom: "160px" }} />}
+                  {orderLines.length > 0 && <div style={{ height: "48px" }} />}
 
                 </div>
               </div>
@@ -2831,177 +2871,134 @@ const IndexPhone = () => {
             {orderLines.length === 0 && (
               <p className="text-[14.5px]" style={dim}>No items added yet</p>
             )}
-          </div>
-        </div>
-      )}
 
-      {/* ── Fixed scroll-hint arrow (fades/grows as user scrolls) ── */}
-      {showOrderPanel && !summaryExpanded && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: "40px",
-            left: "50%",
-            transform: `translateX(-50%) scale(${0.25 + 0.75 * arrowProgress})`,
-            opacity: arrowProgress,
-            transformOrigin: "center bottom",
-            pointerEvents: "none",
-            zIndex: 52,
-          }}
-        >
-          <svg width="16" height="36" viewBox="0 0 16 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <line x1="8" y1="0" x2="8" y2="28" stroke="white" strokeWidth="1"/>
-            <polyline points="2,22 8,34 14,22" fill="none" stroke="white" strokeWidth="1"/>
-          </svg>
-        </div>
-      )}
+            </div>{/* end NEW ORDER blur wrapper */}
 
-      {/* ── ORDER SUMMARY EXPANDED OVERLAY ── */}
-      {showOrderPanel && (
-        <div
-          className="fixed inset-0 z-[55] overflow-hidden"
-          style={{
-            transform: summaryExpanded ? "translateY(0)" : "translateY(100%)",
-            transition: "transform 0.7s cubic-bezier(0.4,0,0.2,1)",
-            background: "hsl(var(--background))",
-            borderLeft: `1px solid hsl(var(--border))`,
-            maxWidth: "500px",
-            marginLeft: "auto",
-          }}
-        >
-          <div
-            ref={summaryOverlayRef}
-            className="h-full overflow-y-auto p-5"
-            style={{
-              filter: summaryExpanded ? "blur(0px)" : "blur(6px)",
-              opacity: summaryExpanded ? 1 : 0,
-              transition: "filter 0.4s ease 0.05s, opacity 0.4s ease 0.05s",
-            }}
-            onWheel={(e) => {
-              if ((summaryOverlayRef.current?.scrollTop ?? 1) === 0 && e.deltaY < -50) {
-                setSummaryExpanded(false);
-                panelScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-              }
-            }}
-            onTouchStart={(e) => { (summaryOverlayRef.current as any)._touchY = e.touches[0].clientY; }}
-            onTouchMove={(e) => {
-              const startY = (summaryOverlayRef.current as any)._touchY ?? 0;
-              const deltaY = startY - e.touches[0].clientY;
-              if ((summaryOverlayRef.current?.scrollTop ?? 1) === 0 && deltaY < -50) {
-                setSummaryExpanded(false);
-                panelScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-              }
-            }}
-          >
-            {/* Overlay header — same style as NEW ORDER */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-[16px] font-light tracking-[0.15em] uppercase">Order Summary</h2>
-              <button
-                onClick={() => { setSummaryExpanded(false); panelScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" }); }}
-                style={dim}
-                onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--foreground))")}
-                onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--muted-foreground))")}
+            {/* ── Inline ORDER SUMMARY (scroll-driven fade+scale) ── */}
+            {orderLines.length > 0 && (
+              <div
+                ref={summaryInlineRef}
+                style={{
+                  marginTop: "18px",
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 10,
+                  background: "hsl(var(--background))",
+                }}
               >
-                <X size={16} />
-              </button>
-            </div>
+                <div
+                  style={{
+                    opacity: summaryProgress,
+                    transform: `scale(${0.8 + 0.2 * summaryProgress})`,
+                    transformOrigin: "top center",
+                    filter: `blur(${(1 - summaryProgress) * 6}px)`,
+                    transition: "opacity 0.1s ease, transform 0.1s ease, filter 0.1s ease",
+                    pointerEvents: summaryProgress > 0.05 ? "auto" : "none",
+                  }}
+                >
+                {/* divider */}
+                <div style={{ borderTop: `1px solid hsl(var(--border))`, marginBottom: "24px" }} />
+                <h2 className="text-[16px] font-light tracking-[0.15em] uppercase mb-6">Order Summary</h2>
+                {/* ORDER SUMMARY CONTENT */}
+                {(() => {
+                  const today = new Date();
+                  const dd = String(today.getDate()).padStart(2, "0");
+                  const mm = String(today.getMonth() + 1).padStart(2, "0");
+                  const yy = String(today.getFullYear()).slice(-2);
+                  const dateStr = `${dd}${mm}${yy}`;
 
-            {orderLines.length === 0 ? (
-              <p className="text-[13px]" style={dim}>No items added yet.</p>
-            ) : (() => {
-              const today = new Date();
-              const dd = String(today.getDate()).padStart(2, "0");
-              const mm = String(today.getMonth() + 1).padStart(2, "0");
-              const yy = String(today.getFullYear()).slice(-2);
-              const dateStr = `${dd}${mm}${yy}`;
+                  const groups: Record<string, typeof orderLines> = {};
+                  orderLines.forEach(line => {
+                    const sup = line.supplierChoice ?? line.product["SUPPLIER"] ?? "Unknown";
+                    if (!groups[sup]) groups[sup] = [];
+                    groups[sup].push(line);
+                  });
+                  const supplierNames = Object.keys(groups);
+                  const multi = supplierNames.length > 1;
 
-              const groups: Record<string, typeof orderLines> = {};
-              orderLines.forEach(line => {
-                const sup = line.supplierChoice ?? line.product["SUPPLIER"] ?? "Unknown";
-                if (!groups[sup]) groups[sup] = [];
-                groups[sup].push(line);
-              });
-              const supplierNames = Object.keys(groups);
-              const multi = supplierNames.length > 1;
+                  const grandTotal = orderLines.reduce((sum, line) => {
+                    const rp = line.supplierChoice
+                      ? products.find(p => p["PRODUCT NAME"] === line.product["PRODUCT NAME"] && p["SUPPLIER"] === line.supplierChoice) ?? line.product
+                      : line.product;
+                    return sum + (rp["SUPPLIER PRICE"] ?? 0) * line.qty;
+                  }, 0);
+                  const grandUnits = orderLines.reduce((s, l) => s + l.qty * (l.product["UNITS/ORDER"] ?? 1), 0);
 
-              const grandTotal = orderLines.reduce((sum, line) => {
-                const rp = line.supplierChoice
-                  ? products.find(p => p["PRODUCT NAME"] === line.product["PRODUCT NAME"] && p["SUPPLIER"] === line.supplierChoice) ?? line.product
-                  : line.product;
-                return sum + (rp["SUPPLIER PRICE"] ?? 0) * line.qty;
-              }, 0);
-              const grandUnits = orderLines.reduce((s, l) => s + l.qty * (l.product["UNITS/ORDER"] ?? 1), 0);
-
-              return (
-                <div>
-                  {supplierNames.map((supplier, sIdx) => {
-                    const grpLines = groups[supplier];
-                    const grn = multi ? `OFFICE ${dateStr} (${sIdx + 1})` : `OFFICE ${dateStr}`;
-                    const subtotal = grpLines.reduce((s, l) => {
-                      const rp = l.supplierChoice
-                        ? products.find(p => p["PRODUCT NAME"] === l.product["PRODUCT NAME"] && p["SUPPLIER"] === l.supplierChoice) ?? l.product
-                        : l.product;
-                      return s + (rp["SUPPLIER PRICE"] ?? 0) * l.qty;
-                    }, 0);
-
-                    return (
-                      <div key={supplier} className={sIdx > 0 ? "mb-5 mt-8 pt-6 border-t" : "mb-5"} style={sIdx > 0 ? { borderColor: border } : {}}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[12px] font-semibold tracking-wide" style={{ color: "hsl(var(--foreground))" }}>{supplier}</span>
-                          <span className="text-[11px] tracking-wider font-mono" style={dim}>{grn}</span>
-                        </div>
-                        {grpLines.map((line, lIdx) => {
-                          const rp = line.supplierChoice
-                            ? products.find(p => p["PRODUCT NAME"] === line.product["PRODUCT NAME"] && p["SUPPLIER"] === line.supplierChoice) ?? line.product
-                            : line.product;
-                          const unitPrice = rp["SUPPLIER PRICE"] ?? 0;
-                          const unitsPerOrder = line.product["UNITS/ORDER"] ?? 1;
-                          const lineTotal = unitPrice * line.qty;
-                          const globalIdx = orderLines.indexOf(line);
-                          return (
-                            <div key={lIdx} className="flex items-center gap-2 py-1.5 border-b" style={{ borderColor: border }}>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[11px] leading-tight truncate" style={{ color: "hsl(var(--foreground))" }}>{line.product["PRODUCT NAME"]}</p>
-                                {unitsPerOrder > 1 && (
-                                  <p className="text-[11px]" style={dim}>{line.qty * unitsPerOrder} units received</p>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <button className="w-5 h-5 flex items-center justify-center rounded text-[11px]" style={dim}
-                                  onClick={() => setOrderLines(prev => prev.map((ol, i) => i === globalIdx && ol.qty > 1 ? { ...ol, qty: ol.qty - 1 } : ol))}>−</button>
-                                <span className="text-[11px] w-4 text-center" style={{ color: "hsl(var(--foreground))" }}>{line.qty}</span>
-                                <button className="w-5 h-5 flex items-center justify-center rounded text-[11px]" style={dim}
-                                  onClick={() => setOrderLines(prev => prev.map((ol, i) => i === globalIdx ? { ...ol, qty: ol.qty + 1 } : ol))}>+</button>
-                              </div>
-                              <span className="text-[11px] w-16 text-right shrink-0" style={dim}>RM {lineTotal.toFixed(2)}</span>
-                              <button className="shrink-0 text-[11px] leading-none ml-1" style={{ color: "hsl(var(--red))" }}
-                                onClick={() => setOrderLines(prev => prev.filter((_, i) => i !== globalIdx))}>×</button>
+                  return (
+                    <div>
+                      {supplierNames.map((supplier, sIdx) => {
+                        const grpLines = groups[supplier];
+                        const grn = multi ? `OFFICE ${dateStr} (${sIdx + 1})` : `OFFICE ${dateStr}`;
+                        const subtotal = grpLines.reduce((s, l) => {
+                          const rp = l.supplierChoice
+                            ? products.find(p => p["PRODUCT NAME"] === l.product["PRODUCT NAME"] && p["SUPPLIER"] === l.supplierChoice) ?? l.product
+                            : l.product;
+                          return s + (rp["SUPPLIER PRICE"] ?? 0) * l.qty;
+                        }, 0);
+                        return (
+                          <div key={supplier} className={sIdx > 0 ? "mb-5 mt-8 pt-6 border-t" : "mb-5"} style={sIdx > 0 ? { borderColor: border } : {}}>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[12px] font-semibold tracking-wide" style={{ color: "hsl(var(--foreground))" }}>{supplier}</span>
+                              <span className="text-[11px] tracking-wider font-mono" style={dim}>{grn}</span>
                             </div>
-                          );
-                        })}
-                        <div className="flex justify-between mt-1.5">
+                            {grpLines.map((line, lIdx) => {
+                              const rp = line.supplierChoice
+                                ? products.find(p => p["PRODUCT NAME"] === line.product["PRODUCT NAME"] && p["SUPPLIER"] === line.supplierChoice) ?? line.product
+                                : line.product;
+                              const unitPrice = rp["SUPPLIER PRICE"] ?? 0;
+                              const unitsPerOrder = line.product["UNITS/ORDER"] ?? 1;
+                              const lineTotal = unitPrice * line.qty;
+                              const globalIdx = orderLines.indexOf(line);
+                              return (
+                                <div key={lIdx} className="flex items-center gap-2 py-1.5 border-b" style={{ borderColor: border }}>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[11px] leading-tight truncate" style={{ color: "hsl(var(--foreground))" }}>{line.product["PRODUCT NAME"]}</p>
+                                    {unitsPerOrder > 1 && (
+                                      <p className="text-[11px]" style={dim}>{line.qty * unitsPerOrder} units received</p>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button className="w-5 h-5 flex items-center justify-center rounded text-[11px]" style={dim}
+                                      onClick={() => setOrderLines(prev => prev.map((ol, i) => i === globalIdx && ol.qty > 1 ? { ...ol, qty: ol.qty - 1 } : ol))}>−</button>
+                                    <span className="text-[11px] w-4 text-center" style={{ color: "hsl(var(--foreground))" }}>{line.qty}</span>
+                                    <button className="w-5 h-5 flex items-center justify-center rounded text-[11px]" style={dim}
+                                      onClick={() => setOrderLines(prev => prev.map((ol, i) => i === globalIdx ? { ...ol, qty: ol.qty + 1 } : ol))}>+</button>
+                                  </div>
+                                  <span className="text-[11px] w-16 text-right shrink-0" style={dim}>RM {lineTotal.toFixed(2)}</span>
+                                  <button className="shrink-0 text-[11px] leading-none ml-1" style={{ color: "hsl(var(--red))" }}
+                                    onClick={() => setOrderLines(prev => prev.filter((_, i) => i !== globalIdx))}>×</button>
+                                </div>
+                              );
+                            })}
+                            <div className="flex justify-between mt-1.5">
+                              <span className="text-[11px] tracking-wider uppercase" style={dim}>
+                                {grpLines.reduce((s, l) => s + l.qty, 0)} orders
+                              </span>
+                              <span className="text-[11px] font-medium" style={{ color: "hsl(var(--foreground))" }}>RM {subtotal.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div className="pt-3 mt-2 border-t" style={{ borderColor: border }}>
+                        <div className="flex justify-between">
                           <span className="text-[11px] tracking-wider uppercase" style={dim}>
-                            {grpLines.reduce((s, l) => s + l.qty, 0)} orders
+                            {orderLines.length} {orderLines.length === 1 ? "item" : "items"} · {grandUnits} units{multi ? ` · ${supplierNames.length} suppliers` : ""}
                           </span>
-                          <span className="text-[11px] font-medium" style={{ color: "hsl(var(--foreground))" }}>RM {subtotal.toFixed(2)}</span>
+                          <span className="text-[11px] font-semibold" style={{ color: "hsl(var(--foreground))" }}>RM {grandTotal.toFixed(2)}</span>
                         </div>
                       </div>
-                    );
-                  })}
-                  <div className="pt-3 mt-2 border-t" style={{ borderColor: border }}>
-                    <div className="flex justify-between">
-                      <span className="text-[11px] tracking-wider uppercase" style={dim}>
-                        {orderLines.length} {orderLines.length === 1 ? "item" : "items"} · {grandUnits} units{multi ? ` · ${supplierNames.length} suppliers` : ""}
-                      </span>
-                      <span className="text-[11px] font-semibold" style={{ color: "hsl(var(--foreground))" }}>RM {grandTotal.toFixed(2)}</span>
                     </div>
-                  </div>
+                  );
+                })()}
                 </div>
-              );
-            })()}
+              </div>
+            )}
+            {/* Spacer: exact height so ORDER SUMMARY can reach top, no over-scroll */}
+            <div style={{ height: summarySpacerHeight }} />
           </div>
         </div>
       )}
+
     </div>
   );
 };
