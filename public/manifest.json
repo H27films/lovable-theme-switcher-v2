@@ -7,8 +7,13 @@
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#b46482",
-  "background_color": "#b46482",
+  "background_color": "#f6f3ee",
   "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "32x32",
+      "type": "image/x-icon"
+    },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
